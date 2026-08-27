@@ -133,6 +133,26 @@ def _init_tickets_db() -> None:
 # Clase principal: AlertManager
 # ---------------------------------------------------------------------------
 
+def _get_ticket_priority(level: str, category: str) -> str:
+    """Calcula la prioridad ITIL (P1-P4) en base al nivel y categoría de la alerta."""
+    if level == "CRITICAL":
+        return "P1"
+    if level == "INFO" and category == "ROUTINE_CHECK":
+        return "P4"
+    priority_map = {
+        "HEALTH_CRITICAL": "P1",
+        "BACKUP_FAILURE": "P2",
+        "DR_VALIDATION_FAILURE": "P1",
+        "CAPACITY_ALERT": "P2",
+        "DISK_ALERT": "P2",
+        "DB_SIZE_ALERT": "P3",
+        "COLLECTION_ERROR": "P3",
+        "SYSTEM_ALERT": "P3",
+        "ROUTINE_CHECK": "P4",
+    }
+    return priority_map.get(category, "P3")
+
+
 class AlertManager:
     """
     Gestiona el ciclo de vida completo de alertas: creación, deduplicación,
@@ -348,20 +368,7 @@ class AlertManager:
             Diccionario con los datos del ticket creado.
         """
         _init_tickets_db()
-
-        # Mapeo de categoría a prioridad ITSM
-        priority_map = {
-            "BACKUP_FAILURE":         "P2",
-            "HEALTH_CRITICAL":        "P1",
-            "CAPACITY_ALERT":         "P2",
-            "DR_VALIDATION_FAILURE":  "P1",
-            "DISK_ALERT":             "P2",
-            "DB_SIZE_ALERT":          "P3",
-            "COLLECTION_ERROR":       "P3",
-        }
-        # Escalar a P1 si el nivel es CRITICAL
-        base_priority = priority_map.get(alert.category, "P3")
-        priority = "P1" if alert.level == "CRITICAL" and base_priority != "P1" else base_priority
+        priority = _get_ticket_priority(alert.level, alert.category)
 
         # Generar número correlativo
         date_key = datetime.utcnow().strftime("%Y%m%d")
