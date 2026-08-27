@@ -1,0 +1,161 @@
+# =============================================================================
+# CloudDB Sentinel — Docker Compose Multi-Servicio B2B
+# =============================================================================
+# Entorno de pruebas y producción para simulación de infraestructura Cloud B2B:
+# - PostgreSQL 16 (Base de datos Cliente A - Telecom & TI)
+# - MySQL 8.0 (Base de datos Cliente B - B2B Services)
+# - MinIO (Almacenamiento de Objetos compatible con AWS S3 para Backups)
+# - Prometheus (Recolección y almacenamiento de métricas)
+# - PostgreSQL Exporter (Exportador de métricas para Prometheus)
+# - Grafana (Dashboards visuales de observabilidad)
+# =============================================================================
+
+version: '3.8'
+
+services:
+  # ---------------------------------------------------------------------------
+  # Base de Datos 1: PostgreSQL 16 (Cliente A - Producción B2B)
+  # ---------------------------------------------------------------------------
+  postgres-client-a:
+    image: postgres:16-alpine
+    container_name: clouddb-postgres-client-a
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-admin_cloud}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-SecureCloudPass2026!}
+      POSTGRES_DB: ${POSTGRES_DB:-cliente_a_prod}
+      PGDATA: /var/lib/postgresql/data/pgdata
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./scripts/setup_demo_data.sql:/docker-entrypoint-initdb.d/01_init.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-admin_cloud} -d ${POSTGRES_DB:-cliente_a_prod}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - clouddb-net
+
+  # ---------------------------------------------------------------------------
+  # Base de Datos 2: MySQL 8.0 (Cliente B - Facturación & ERP)
+  # ---------------------------------------------------------------------------
+  mysql-client-b:
+    image: mysql:8.0
+    container_name: clouddb-mysql-client-b
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-RootSecurePass2026!}
+      MYSQL_DATABASE: ${MYSQL_DB:-cliente_b_prod}
+      MYSQL_USER: ${MYSQL_USER:-admin_mysql}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:-MySQLPass2026!}
+    ports:
+      - "${MYSQL_PORT:-3306}:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p${MYSQL_ROOT_PASSWORD:-RootSecurePass2026!}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - clouddb-net
+
+  # ---------------------------------------------------------------------------
+  # Almacenamiento de Objetos: MinIO (S3 Compatible para Backups y DR)
+  # ---------------------------------------------------------------------------
+  minio-storage:
+    image: minio/minio:latest
+    container_name: clouddb-minio-s3
+    restart: unless-stopped
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: ${S3_ACCESS_KEY:-cloud_backup_admin}
+      MINIO_ROOT_PASSWORD: ${S3_SECRET_KEY:-MinioBackupPass2026!}
+    ports:
+      - "${MINIO_API_PORT:-9000}:9000"       # S3 API
+      - "${MINIO_CONSOLE_PORT:-9001}:9001"   # Web Console
+    volumes:
+      - minio_data:/data
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+    networks:
+      - clouddb-net
+
+  # ---------------------------------------------------------------------------
+  # Observabilidad: Prometheus (Métricas de Servidores y Motores DB)
+  # ---------------------------------------------------------------------------
+  prometheus:
+    image: prom/prometheus:v2.51.0
+    container_name: clouddb-prometheus
+    restart: unless-stopped
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/usr/share/prometheus/console_libraries'
+      - '--web.console.templates=/usr/share/prometheus/consoles'
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./config/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus_data:/prometheus
+    networks:
+      - clouddb-net
+
+  # ---------------------------------------------------------------------------
+  # Exportador de Métricas PostgreSQL para Prometheus
+  # ---------------------------------------------------------------------------
+  postgres-exporter:
+    image: prometheuscommunity/postgres-exporter:latest
+    container_name: clouddb-postgres-exporter
+    restart: unless-stopped
+    environment:
+      DATA_SOURCE_NAME: "postgresql://${POSTGRES_USER:-admin_cloud}:${POSTGRES_PASSWORD:-SecureCloudPass2026!}@postgres-client-a:5432/${POSTGRES_DB:-cliente_a_prod}?sslmode=disable"
+    ports:
+      - "9187:9187"
+    depends_on:
+      postgres-client-a:
+        condition: service_healthy
+    networks:
+      - clouddb-net
+
+  # ---------------------------------------------------------------------------
+  # Visualización: Grafana (Dashboards de Métricas y SLAs)
+  # ---------------------------------------------------------------------------
+  grafana:
+    image: grafana/grafana:10.4.0
+    container_name: clouddb-grafana
+    restart: unless-stopped
+    environment:
+      - GF_SECURITY_ADMIN_USER=${GRAFANA_ADMIN_USER:-admin}
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_ADMIN_PASSWORD:-AdminGrafana2026!}
+      - GF_USERS_ALLOW_SIGN_UP=false
+    ports:
+      - "3000:3000"
+    volumes:
+      - grafana_data:/var/lib/grafana
+    depends_on:
+      - prometheus
+    networks:
+      - clouddb-net
+
+networks:
+  clouddb-net:
+    driver: bridge
+    name: clouddb-sentinel-network
+
+volumes:
+  postgres_data:
+    name: clouddb_postgres_data
+  mysql_data:
+    name: clouddb_mysql_data
+  minio_data:
+    name: clouddb_minio_data
+  prometheus_data:
+    name: clouddb_prometheus_data
+  grafana_data:
+    name: clouddb_grafana_data

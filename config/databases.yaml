@@ -1,0 +1,71 @@
+# =============================================================================
+# CloudDB Sentinel — Inventario de Bases de Datos Gestionadas (B2B Cloud)
+# =============================================================================
+# Catálogo centralizado de bases de datos administradas para clientes B2B.
+# Define la topología, parámetros de conexión y acuerdos de nivel de servicio (SLAs).
+# =============================================================================
+
+databases:
+  # ---------------------------------------------------------------------------
+  # Cliente A: Sector Telecomunicaciones & CRM Corporativo
+  # ---------------------------------------------------------------------------
+  - id: "cliente-a-pg"
+    name: "Cliente A - Telecom & CRM Core"
+    type: "postgres"
+    host: "${POSTGRES_HOST}"
+    port: "${POSTGRES_PORT}"
+    database: "${POSTGRES_DB}"
+    credentials:
+      username: "${POSTGRES_USER}"
+      password: "${POSTGRES_PASSWORD}"
+    sla:
+      tier: "Tier-1 (Mission Critical)"
+      rpo_hours: 1
+      rto_hours: 2
+      max_connections_threshold_pct: 80
+      cache_hit_ratio_min_pct: 98.0
+      max_query_duration_seconds: 30
+      backup_frequency: "daily"
+      backup_retention_days: 30
+      dr_test_frequency_days: 7
+    monitoring:
+      enabled: true
+      health_check_interval_minutes: 15
+      capacity_alert_threshold_pct: 80
+    tags:
+      environment: "production"
+      client: "Cliente A Telecom"
+      region: "sa-east-1"
+      cloud_provider: "On Cloud / On-Premise"
+
+  # ---------------------------------------------------------------------------
+  # Cliente B: Sector Facturación Electrónica & ERP
+  # ---------------------------------------------------------------------------
+  - id: "cliente-b-mysql"
+    name: "Cliente B - Facturación & ERP"
+    type: "mysql"
+    host: "${MYSQL_HOST}"
+    port: "${MYSQL_PORT}"
+    database: "${MYSQL_DB}"
+    credentials:
+      username: "${MYSQL_USER}"
+      password: "${MYSQL_PASSWORD}"
+    sla:
+      tier: "Tier-2 (Business Critical)"
+      rpo_hours: 4
+      rto_hours: 4
+      max_connections_threshold_pct: 85
+      cache_hit_ratio_min_pct: 95.0
+      max_query_duration_seconds: 45
+      backup_frequency: "daily"
+      backup_retention_days: 15
+      dr_test_frequency_days: 15
+    monitoring:
+      enabled: true
+      health_check_interval_minutes: 30
+      capacity_alert_threshold_pct: 85
+    tags:
+      environment: "production"
+      client: "Cliente B Finanzas"
+      region: "sa-east-1"
+      cloud_provider: "On Cloud / Hybrid"

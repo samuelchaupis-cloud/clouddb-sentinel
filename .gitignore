@@ -1,0 +1,79 @@
+# =============================================================================
+# CloudDB Sentinel — .gitignore
+# =============================================================================
+
+# Entornos Virtuales
+venv/
+.venv/
+env/
+ENV/
+env.bak/
+venv.bak/
+
+# Bytecode y Caché de Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Archivos de Entorno y Secretos (CRÍTICO: No subir a GitHub)
+.env
+.env.local
+.env.*.local
+*.pem
+*.key
+*.cert
+
+# Datos Locales, Bases de Datos SQLite y Backups
+data/*.db
+data/backups/*
+!data/backups/.gitkeep
+backups/*
+!backups/.gitkeep
+logs/*.log
+logs/health_reports/*
+!logs/health_reports/.gitkeep
+logs/dr_certificates/*
+!logs/dr_certificates/.gitkeep
+reports/*.html
+reports/*.pdf
+!reports/.gitkeep
+
+# Pruebas y Cobertura
+.tox/
+.nox/
+.coverage
+.coverage.*
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+*.py,cover
+.hypothesis/
+.pytest_cache/
+htmlcov/
+
+# IDEs y Editores de Código
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db

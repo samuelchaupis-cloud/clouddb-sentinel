@@ -1,0 +1,80 @@
+# =============================================================================
+# CloudDB Sentinel — GitHub Actions CI/CD Pipeline
+# =============================================================================
+# Pipeline automatizado que valida la calidad de código, linting y pruebas
+# unitarias en cada Push y Pull Request sobre la rama principal.
+# =============================================================================
+
+name: CloudDB Sentinel CI
+
+on:
+  push:
+    branches: [ "main", "master", "develop" ]
+  pull_request:
+    branches: [ "main", "master" ]
+
+jobs:
+  # ---------------------------------------------------------------------------
+  # Job 1: Linting y Análisis Estático de Código
+  # ---------------------------------------------------------------------------
+  lint:
+    name: Code Quality & Linting
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout del Código
+        uses: actions/checkout@v4
+
+      - name: Configurar Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: "pip"
+
+      - name: Instalar dependencias de desarrollo
+        run: |
+          python -m pip install --upgrade pip
+          pip install flake8 black pytest
+
+      - name: Validar sintaxis y errores críticos con Flake8
+        run: |
+          # Detiene la ejecución si hay errores de sintaxis Python o variables indefinidas
+          flake8 src tests --count --select=E9,F63,F7,F82 --show-source --statistics
+          # Advertencias de complejidad y estilo (sin romper el build)
+          flake8 src tests --count --exit-zero --max-complexity=15 --max-line-length=120 --statistics
+
+  # ---------------------------------------------------------------------------
+  # Job 2: Pruebas Unitarias Automatizadas (Matrix: Ubuntu y Windows)
+  # ---------------------------------------------------------------------------
+  test:
+    name: Unit Tests (${{ matrix.os }} - Python ${{ matrix.python-version }})
+    needs: lint
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+        python-version: ["3.10", "3.11", "3.12"]
+
+    steps:
+      - name: Checkout del Código
+        uses: actions/checkout@v4
+
+      - name: Configurar Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: "pip"
+
+      - name: Instalar dependencias del proyecto
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install pytest pytest-cov
+
+      - name: Copiar configuración de entorno para pruebas
+        run: |
+          python -c "import shutil, os; shutil.copy('.env.example', '.env') if not os.path.exists('.env') else None"
+
+      - name: Ejecutar Suite de Pruebas Automatizadas con Pytest
+        run: |
+          pytest tests/ -v --color=yes

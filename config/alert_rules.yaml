@@ -1,0 +1,82 @@
+# =============================================================================
+# CloudDB Sentinel — Reglas y Umbrales de Alertas Preventivas & Críticas
+# =============================================================================
+# Matriz de reglas operativas para clasificación de incidentes y generación de alertas.
+# =============================================================================
+
+global:
+  cooldown_minutes: 30
+  auto_remediation_enabled: false
+
+rules:
+  # ---------------------------------------------------------------------------
+  # 1. Disponibilidad & Conectividad
+  # ---------------------------------------------------------------------------
+  connection_latency:
+    description: "Latencia en la conexión al socket de base de datos"
+    warning_ms: 100
+    critical_ms: 500
+    action: "Verificar carga de red y procesos de CPU en el host"
+
+  # ---------------------------------------------------------------------------
+  # 2. Conexiones Activas vs Capacidad Máxima
+  # ---------------------------------------------------------------------------
+  active_connections_pct:
+    description: "Porcentaje de conexiones utilizadas frente a max_connections"
+    warning_pct: 70.0
+    critical_pct: 90.0
+    action: "Inspeccionar fuga de conexiones en pools de aplicaciones o balanceadores"
+
+  # ---------------------------------------------------------------------------
+  # 3. Tasa de Aciertos en Memoria Caché (Buffer Cache Hit Ratio)
+  # ---------------------------------------------------------------------------
+  cache_hit_ratio_pct:
+    description: "Porcentaje de lecturas resueltas en memoria RAM vs disco"
+    warning_pct: 98.0      # Si baja de 98%
+    critical_pct: 95.0     # Si baja de 95%
+    action: "Ajustar shared_buffers / innodb_buffer_pool_size o revisar consultas con escaneo secuencial"
+
+  # ---------------------------------------------------------------------------
+  # 4. Bloqueos y Deadlocks
+  # ---------------------------------------------------------------------------
+  waiting_locks_count:
+    description: "Transacciones bloqueadas esperando liberación de recursos"
+    warning_count: 3
+    critical_count: 10
+    action: "Identificar sesión causante del lock y evaluar terminación controlada (pg_terminate_backend)"
+
+  # ---------------------------------------------------------------------------
+  # 5. Consultas de Larga Duración (Long Running Queries)
+  # ---------------------------------------------------------------------------
+  query_duration_seconds:
+    description: "Tiempo de ejecución continuo de una consulta individual"
+    warning_seconds: 30
+    critical_seconds: 120
+    action: "Revisar plan de ejecución EXPLAIN ANALYZE y verificar índices faltantes"
+
+  # ---------------------------------------------------------------------------
+  # 6. Antigüedad del Último Respaldo (Backup Age / RPO)
+  # ---------------------------------------------------------------------------
+  backup_age_hours:
+    description: "Horas transcurridas desde el último respaldo exitoso validado"
+    warning_hours: 26.0
+    critical_hours: 48.0
+    action: "Disparar ejecución manual de respaldo y revisar logs del servicio cron/scheduler"
+
+  # ---------------------------------------------------------------------------
+  # 7. Utilización de Espacio en Disco (Storage Capacity)
+  # ---------------------------------------------------------------------------
+  disk_usage_pct:
+    description: "Porcentaje de uso del sistema de archivos donde residen los datos"
+    warning_pct: 75.0
+    critical_pct: 88.0
+    action: "Ejecutar purga de logs antiguos, VACUUM o solicitar ampliación de volumen Cloud LUN/EBS"
+
+  # ---------------------------------------------------------------------------
+  # 8. Estimación de Agotamiento de Capacidad (Days to Disk Full)
+  # ---------------------------------------------------------------------------
+  days_until_disk_full:
+    description: "Días proyectados antes de saturación total al ritmo de crecimiento actual"
+    warning_days: 30
+    critical_days: 10
+    action: "Iniciar procedimiento de escalamiento de capacidad y compras con el cliente B2B"

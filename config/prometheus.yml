@@ -1,0 +1,38 @@
+# =============================================================================
+# CloudDB Sentinel — Configuración de Recolección de Métricas Prometheus
+# =============================================================================
+
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+  scrape_timeout: 10s
+
+scrape_configs:
+  # ---------------------------------------------------------------------------
+  # Métricas de Prometheus Propio
+  # ---------------------------------------------------------------------------
+  - job_name: 'prometheus'
+    static_configs:
+      - targets: ['localhost:9090']
+
+  # ---------------------------------------------------------------------------
+  # Métricas de PostgreSQL (Cliente A - B2B Telecom)
+  # ---------------------------------------------------------------------------
+  - job_name: 'postgres_exporter_cliente_a'
+    static_configs:
+      - targets: ['postgres-exporter:9187']
+        labels:
+          environment: 'production'
+          client: 'ClienteA'
+          db_type: 'postgresql'
+
+  # ---------------------------------------------------------------------------
+  # Métricas de MinIO S3 (Almacenamiento de Respaldos)
+  # ---------------------------------------------------------------------------
+  - job_name: 'minio_s3_backups'
+    metrics_path: /minio/v2/metrics/cluster
+    scheme: http
+    static_configs:
+      - targets: ['minio-storage:9000']
+        labels:
+          service: 'backup-storage'
