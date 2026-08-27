@@ -23,7 +23,7 @@ import hashlib
 import requests
 from dataclasses import dataclass, field, asdict
 from datetime import datetime, timedelta
-from typing import Optional
+from typing import Optional, Any
 
 # ---------------------------------------------------------------------------
 # Logging estructurado
