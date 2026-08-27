@@ -13,8 +13,17 @@ Fecha: 2026
 """
 
 import os
+import sys
 import json
 import logging
+
+# Configuración defensiva de encoding para Windows
+if hasattr(sys.stdout, "reconfigure"):
+    try:
+        sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+        sys.stderr.reconfigure(encoding="utf-8", errors="replace")
+    except Exception:
+        pass
 from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Optional

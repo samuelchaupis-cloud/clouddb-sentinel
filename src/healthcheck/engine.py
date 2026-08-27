@@ -20,6 +20,14 @@ import logging
 import os
 import sys
 import time
+
+# Configuración defensiva de encoding para Windows
+if hasattr(sys.stdout, "reconfigure"):
+    try:
+        sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+        sys.stderr.reconfigure(encoding="utf-8", errors="replace")
+    except Exception:
+        pass
 from dataclasses import asdict, dataclass, field
 from datetime import datetime, timezone
 from pathlib import Path

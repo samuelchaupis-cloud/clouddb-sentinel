@@ -1,0 +1,13 @@
+﻿apiVersion: 1
+
+providers:
+  - name: 'CloudDB Sentinel Dashboards'
+    orgId: 1
+    folder: 'CloudDB Sentinel'
+    type: file
+    disableDeletion: false
+    editable: true
+    updateIntervalSeconds: 10
+    allowUiUpdates: true
+    options:
+      path: /etc/grafana/dashboards

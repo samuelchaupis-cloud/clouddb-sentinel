@@ -13,8 +13,16 @@ import sqlite3
 import json
 import logging
 import os
-import math
 import subprocess
+import sys
+
+# Configuración defensiva de encoding para Windows
+if hasattr(sys.stdout, "reconfigure"):
+    try:
+        sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+        sys.stderr.reconfigure(encoding="utf-8", errors="replace")
+    except Exception:
+        pass
 from dataclasses import dataclass, field, asdict
 from datetime import datetime, timedelta
 from typing import Optional
