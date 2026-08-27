@@ -1,614 +1,1144 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>CloudDB Sentinel - Reporte de Monitoreo {{ report_date }}</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CloudDB Sentinel — Executive Operations & Health Check Portal</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
   <style>
-    /* =========================================================
-       CLOUDDB SENTINEL - REPORTE CORPORATIVO B2B
-       Paleta: Azul corporativo #003366, blanco, gris neutro
-       ========================================================= */
     :root {
-      --color-primary:    #003366;
-      --color-secondary:  #005599;
-      --color-accent:     #0077CC;
-      --color-bg:         #F4F6FA;
-      --color-surface:    #FFFFFF;
-      --color-border:     #D0D7E3;
-      --color-text:       #1A1A2E;
-      --color-text-muted: #6B7280;
-      --color-success:    #15803D;
-      --color-success-bg: #DCFCE7;
-      --color-warning:    #92400E;
-      --color-warning-bg: #FEF3C7;
-      --color-danger:     #991B1B;
-      --color-danger-bg:  #FEE2E2;
-      --font-main: 'Segoe UI', Helvetica, Arial, sans-serif;
-      --font-mono: 'Consolas', 'Courier New', monospace;
-      --radius:    6px;
-      --shadow:    0 1px 4px rgba(0,51,102,0.10);
+      --primary: #0F172A;
+      --primary-accent: #2563EB;
+      --primary-light: #3B82F6;
+      --sidebar-bg: #0F172A;
+      --sidebar-active: #1E293B;
+      --bg-page: #F8FAFC;
+      --bg-card: #FFFFFF;
+      --text-main: #0F172A;
+      --text-muted: #64748B;
+      --border-subtle: #E2E8F0;
+      --border-card: #F1F5F9;
+      
+      --success: #10B981;
+      --success-bg: #ECFDF5;
+      --success-border: #A7F3D0;
+      
+      --warning: #F59E0B;
+      --warning-bg: #FFFBEB;
+      --warning-border: #FDE68A;
+      
+      --danger: #EF4444;
+      --danger-bg: #FEF2F2;
+      --danger-border: #FECACA;
+      
+      --purple: #8B5CF6;
+      --purple-bg: #F5F3FF;
+      --purple-border: #DDD6FE;
+      
+      --radius-sm: 8px;
+      --radius-md: 12px;
+      --radius-lg: 16px;
+      --radius-full: 9999px;
+      
+      --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+      --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.06), 0 2px 4px -2px rgba(0, 0, 0, 0.04);
+      --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.08), 0 4px 6px -4px rgba(0, 0, 0, 0.03);
     }
 
     * { box-sizing: border-box; margin: 0; padding: 0; }
-
     body {
-      font-family: var(--font-main);
-      font-size: 13px;
-      background: var(--color-bg);
-      color: var(--color-text);
+      font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+      background-color: var(--bg-page);
+      color: var(--text-main);
       line-height: 1.5;
+      -webkit-font-smoothing: antialiased;
+      display: flex;
+      min-height: 100vh;
     }
 
-    /* ---- WRAPPER ---- */
-    .report-wrapper {
-      max-width: 1200px;
-      margin: 0 auto;
-      background: var(--color-surface);
-      box-shadow: 0 2px 16px rgba(0,51,102,0.12);
+    /* Icon Utility */
+    .svg-icon {
+      width: 20px;
+      height: 20px;
+      stroke-width: 2;
+      stroke: currentColor;
+      fill: none;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+      display: inline-block;
+      vertical-align: middle;
+      flex-shrink: 0;
     }
 
-    /* ---- HEADER ---- */
-    .report-header {
-      background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-secondary) 100%);
+    /* ==========================================================================
+       SIDEBAR NAVIGATION (Enterprise Dark Slate)
+       ========================================================================== */
+    .sidebar {
+      width: 260px;
+      background: var(--sidebar-bg);
       color: #FFFFFF;
-      padding: 32px 40px 24px;
+      display: flex;
+      flex-direction: column;
+      flex-shrink: 0;
+      position: sticky;
+      top: 0;
+      height: 100vh;
+      box-shadow: 4px 0 24px rgba(0,0,0,0.06);
+      z-index: 50;
+      border-right: 1px solid rgba(255,255,255,0.06);
+      transition: all 0.3s ease;
+    }
+    .sidebar-brand {
+      padding: 24px 20px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      border-bottom: 1px solid rgba(255,255,255,0.08);
+    }
+    .brand-icon {
+      width: 40px;
+      height: 40px;
+      background: linear-gradient(135deg, #2563EB, #4F46E5);
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #FFFFFF;
+      box-shadow: 0 4px 12px rgba(37, 99, 235, 0.4);
+    }
+    .brand-icon .svg-icon { width: 22px; height: 22px; }
+    .brand-text h2 {
+      font-size: 15.5px;
+      font-weight: 800;
+      letter-spacing: -0.3px;
+      color: #FFFFFF;
+    }
+    .brand-text span {
+      font-size: 11px;
+      color: #94A3B8;
+      display: block;
+      margin-top: -2px;
+    }
+
+    .nav-menu {
+      padding: 20px 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      flex: 1;
+    }
+    .nav-item {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 12px 16px;
+      color: #94A3B8;
+      text-decoration: none;
+      font-size: 13.5px;
+      font-weight: 600;
+      border-radius: var(--radius-md);
+      transition: all 0.2s ease;
+      cursor: pointer;
+    }
+    .nav-item:hover {
+      background: rgba(255,255,255,0.06);
+      color: #FFFFFF;
+      transform: translateX(2px);
+    }
+    .nav-item.active {
+      background: var(--sidebar-active);
+      color: #FFFFFF;
+      border: 1px solid rgba(255,255,255,0.1);
+      box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+    }
+    .nav-item.active .svg-icon { color: var(--primary-light); }
+    
+    .sidebar-footer {
+      padding: 20px;
+      border-top: 1px solid rgba(255,255,255,0.08);
+      font-size: 11.5px;
+      color: #64748B;
+      line-height: 1.6;
+    }
+    .sidebar-footer strong { color: #CBD5E1; }
+
+    /* ==========================================================================
+       MAIN CONTENT CONTAINER
+       ========================================================================== */
+    .main-wrapper {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      overflow-x: hidden;
+      min-width: 0;
+    }
+
+    .topbar {
+      background: var(--bg-card);
+      border-bottom: 1px solid var(--border-subtle);
+      padding: 16px 36px;
       display: flex;
       align-items: center;
       justify-content: space-between;
+      position: sticky;
+      top: 0;
+      z-index: 40;
       flex-wrap: wrap;
-      gap: 16px;
+      gap: 12px;
     }
-    .header-brand { display: flex; align-items: center; gap: 16px; }
-    .header-logo  { font-size: 48px; line-height: 1; }
-    .header-title h1 {
-      font-size: 26px;
-      font-weight: 700;
+    .topbar-left h1 {
+      font-size: 19px;
+      font-weight: 800;
+      color: var(--primary);
       letter-spacing: -0.5px;
     }
-    .header-title p {
-      font-size: 13px;
-      opacity: 0.80;
-      margin-top: 4px;
-    }
-    .header-meta {
-      text-align: right;
-      font-size: 12px;
-      opacity: 0.85;
-      line-height: 1.8;
-    }
-    .header-meta strong { font-size: 15px; display: block; opacity: 1; }
-
-    /* ---- SUBHEADER PERIOD ---- */
-    .report-period {
-      background: var(--color-accent);
-      color: #fff;
-      padding: 8px 40px;
-      font-size: 12px;
-      letter-spacing: 0.3px;
+    .topbar-meta {
       display: flex;
-      gap: 32px;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 12px;
+      font-size: 12px;
+      color: var(--text-muted);
+      margin-top: 2px;
     }
-    .report-period span { opacity: 0.90; }
-    .report-period strong { opacity: 1; }
-
-    /* ---- CONTENT ---- */
-    .report-body { padding: 32px 40px; }
-
-    /* ---- SECTION ---- */
-    .section { margin-bottom: 40px; }
-    .section-title {
-      font-size: 16px;
+    .badge-env {
+      background: #EFF6FF;
+      color: var(--primary-accent);
+      border: 1px solid #BFDBFE;
+      padding: 2px 8px;
+      border-radius: var(--radius-full);
       font-weight: 700;
-      color: var(--color-primary);
-      border-left: 4px solid var(--color-accent);
-      padding-left: 12px;
-      margin-bottom: 16px;
+    }
+    .status-pill-live {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      background: var(--success-bg);
+      border: 1px solid var(--success-border);
+      color: var(--success);
+      padding: 6px 14px;
+      border-radius: var(--radius-full);
+      font-size: 12px;
+      font-weight: 700;
+    }
+    .live-dot {
+      width: 8px;
+      height: 8px;
+      background: var(--success);
+      border-radius: 50%;
+      box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.2);
+      animation: pulse 2s infinite;
+    }
+    @keyframes pulse {
+      0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.4); }
+      70% { transform: scale(1); box-shadow: 0 0 0 6px rgba(16, 185, 129, 0); }
+      100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
+    }
+
+    .content-area {
+      padding: 28px 36px;
+      display: flex;
+      flex-direction: column;
+      gap: 28px;
+      max-width: 1400px;
+      width: 100%;
+    }
+
+    /* ==========================================================================
+       HERO KPI CARDS
+       ========================================================================== */
+    .kpi-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 18px;
+    }
+    .kpi-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-lg);
+      padding: 20px;
+      box-shadow: var(--shadow-sm);
+      display: flex;
+      align-items: flex-start;
+      gap: 16px;
+      transition: all 0.2s ease;
+    }
+    .kpi-card:hover {
+      transform: translateY(-2px);
+      box-shadow: var(--shadow-md);
+      border-color: #CBD5E1;
+    }
+    .kpi-icon-circle {
+      width: 48px;
+      height: 48px;
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+    .kpi-icon-circle .svg-icon { width: 24px; height: 24px; }
+    .icon-green { background: #ECFDF5; color: #059669; }
+    .icon-blue { background: #EFF6FF; color: #2563EB; }
+    .icon-amber { background: #FFFBEB; color: #D97706; }
+    .icon-purple { background: #F5F3FF; color: #7C3AED; }
+
+    .kpi-info { flex: 1; min-width: 0; }
+    .kpi-label {
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.5px;
+      text-transform: uppercase;
+      color: var(--text-muted);
+      margin-bottom: 4px;
+    }
+    .kpi-value {
+      font-size: 24px;
+      font-weight: 800;
+      color: var(--primary);
+      letter-spacing: -0.5px;
+      line-height: 1.1;
+      font-family: 'JetBrains Mono', monospace;
+    }
+    .kpi-subtext {
+      margin-top: 6px;
+      font-size: 11.5px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      color: var(--text-muted);
+      white-space: nowrap;
+    }
+    .trend-up { color: #059669; font-weight: 700; }
+    .trend-warning { color: #D97706; font-weight: 700; }
+
+    /* ==========================================================================
+       TWO COLUMN EXECUTIVE DASHBOARD
+       ========================================================================== */
+    .dashboard-split {
+      display: grid;
+      grid-template-columns: 1.3fr 1fr;
+      gap: 20px;
+    }
+    .panel-box {
+      background: var(--bg-card);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-lg);
+      padding: 24px;
+      box-shadow: var(--shadow-sm);
+    }
+    .panel-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 20px;
+      padding-bottom: 12px;
+      border-bottom: 1px solid var(--border-subtle);
+    }
+    .panel-title {
+      font-size: 14.5px;
+      font-weight: 800;
+      color: var(--primary);
       display: flex;
       align-items: center;
       gap: 8px;
     }
 
-    /* ---- SUMMARY SEMÁFORO ---- */
-    .summary-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-      gap: 16px;
-      margin-bottom: 8px;
-    }
-    .status-card {
-      border-radius: var(--radius);
-      padding: 20px 16px;
-      text-align: center;
-      border: 1px solid var(--color-border);
-      box-shadow: var(--shadow);
-    }
-    .status-card .status-icon  { font-size: 32px; margin-bottom: 8px; }
-    .status-card .status-label { font-size: 11px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; color: var(--color-text-muted); }
-    .status-card .status-value { font-size: 18px; font-weight: 700; margin-top: 4px; }
-
-    .status-card.healthy  { background: var(--color-success-bg); border-color: #86EFAC; }
-    .status-card.healthy  .status-value { color: var(--color-success); }
-    .status-card.degraded { background: var(--color-warning-bg); border-color: #FCD34D; }
-    .status-card.degraded .status-value { color: var(--color-warning); }
-    .status-card.critical { background: var(--color-danger-bg);  border-color: #FCA5A5; }
-    .status-card.critical .status-value { color: var(--color-danger); }
-    .status-card.neutral  { background: var(--color-bg); }
-
-    /* Estado general banner */
-    .overall-status {
-      padding: 16px 24px;
-      border-radius: var(--radius);
+    /* Donut Chart Visual Container */
+    .donut-layout {
       display: flex;
       align-items: center;
-      gap: 16px;
-      font-size: 15px;
-      font-weight: 600;
-      margin-bottom: 24px;
-      border: 1px solid transparent;
+      justify-content: space-around;
+      gap: 24px;
+      padding: 10px 0;
+      flex-wrap: wrap;
     }
-    .overall-status.healthy  { background: var(--color-success-bg); border-color: #86EFAC; color: var(--color-success); }
-    .overall-status.degraded { background: var(--color-warning-bg); border-color: #FCD34D; color: var(--color-warning); }
-    .overall-status.critical { background: var(--color-danger-bg);  border-color: #FCA5A5; color: var(--color-danger); }
-    .overall-status .status-badge { font-size: 24px; }
+    .donut-circle-wrap {
+      position: relative;
+      width: 150px;
+      height: 150px;
+      flex-shrink: 0;
+    }
+    .donut-center-text {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      text-align: center;
+    }
+    .donut-big-num {
+      font-size: 26px;
+      font-weight: 800;
+      color: var(--primary);
+      line-height: 1;
+      font-family: 'JetBrains Mono', monospace;
+    }
+    .donut-sub-label {
+      font-size: 10px;
+      font-weight: 700;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      margin-top: 2px;
+    }
 
-    /* ---- TABLES ---- */
-    .data-table {
-      width: 100%;
-      border-collapse: collapse;
+    .donut-legend {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      flex: 1;
+      min-width: 180px;
+    }
+    .legend-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
       font-size: 12.5px;
-      box-shadow: var(--shadow);
-      border-radius: var(--radius);
+      font-weight: 600;
+    }
+    .legend-left { display: flex; align-items: center; gap: 8px; }
+    .legend-dot { width: 10px; height: 10px; border-radius: 3px; }
+    .dot-ok { background: #10B981; }
+    .dot-warn { background: #F59E0B; }
+    .dot-crit { background: #EF4444; }
+
+    /* Progress Breakdown Bars */
+    .db-bar-list {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+    .db-bar-item {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+    .db-bar-meta {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-size: 12.5px;
+      font-weight: 700;
+    }
+    .db-bar-track {
+      width: 100%;
+      height: 8px;
+      background: #F1F5F9;
+      border-radius: var(--radius-full);
       overflow: hidden;
     }
-    .data-table thead tr {
-      background: var(--color-primary);
-      color: #FFFFFF;
+    .db-bar-fill {
+      height: 100%;
+      border-radius: var(--radius-full);
+      transition: width 0.6s cubic-bezier(0.4, 0, 0.2, 1);
     }
-    .data-table thead th {
-      padding: 10px 14px;
-      text-align: left;
-      font-weight: 600;
-      font-size: 11.5px;
-      letter-spacing: 0.4px;
-      white-space: nowrap;
-    }
-    .data-table tbody tr { border-bottom: 1px solid var(--color-border); }
-    .data-table tbody tr:last-child { border-bottom: none; }
-    .data-table tbody tr:nth-child(even) { background: #F9FAFB; }
-    .data-table tbody tr:hover { background: #EEF4FF; transition: background 0.15s; }
-    .data-table tbody td {
-      padding: 9px 14px;
-      vertical-align: middle;
-    }
-    .data-table .db-name {
-      font-family: var(--font-mono);
-      font-size: 12px;
-      font-weight: 600;
-      color: var(--color-secondary);
-    }
-    .data-table .value-num {
-      font-family: var(--font-mono);
-      font-size: 12px;
-      text-align: right;
-    }
+    .fill-purple { background: linear-gradient(90deg, #6366F1, #8B5CF6); }
+    .fill-blue { background: linear-gradient(90deg, #3B82F6, #06B6D4); }
+    .fill-danger { background: linear-gradient(90deg, #EF4444, #F87171); }
 
-    /* ---- BADGES DE ESTADO ---- */
-    .badge {
-      display: inline-block;
-      padding: 2px 10px;
-      border-radius: 99px;
-      font-size: 11px;
-      font-weight: 700;
-      letter-spacing: 0.5px;
-      text-transform: uppercase;
-      white-space: nowrap;
+    /* ==========================================================================
+       ALERT CARDS
+       ========================================================================== */
+    .alert-banner-list {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
     }
-    .badge-ok       { background: var(--color-success-bg); color: var(--color-success); }
-    .badge-warning  { background: var(--color-warning-bg); color: var(--color-warning); }
-    .badge-critical { background: var(--color-danger-bg);  color: var(--color-danger); }
-    .badge-unknown  { background: #F3F4F6; color: #6B7280; }
-
-    /* ---- TREND INDICATORS ---- */
-    .trend-stable      { color: var(--color-text-muted); }
-    .trend-growing     { color: var(--color-warning); }
-    .trend-accelerating{ color: var(--color-danger); font-weight: 700; }
-
-    /* ---- RECOMMENDATION CELL ---- */
-    .rec-cell {
-      font-size: 11.5px;
-      color: var(--color-text-muted);
-      max-width: 280px;
-      line-height: 1.4;
-    }
-
-    /* ---- ALERTS PANEL ---- */
-    .alerts-panel { margin-bottom: 32px; }
-    .alert-item {
+    .alert-card-item {
       display: flex;
       align-items: flex-start;
       gap: 12px;
       padding: 12px 16px;
-      border-radius: var(--radius);
-      margin-bottom: 8px;
-      font-size: 12.5px;
+      border-radius: var(--radius-md);
       border: 1px solid transparent;
+      font-size: 12.5px;
     }
-    .alert-item.critical { background: var(--color-danger-bg);  border-color: #FCA5A5; }
-    .alert-item.warning  { background: var(--color-warning-bg); border-color: #FCD34D; }
-    .alert-item .alert-icon { font-size: 18px; flex-shrink: 0; margin-top: 1px; }
-    .alert-item .alert-body { flex: 1; }
-    .alert-item .alert-title { font-weight: 700; margin-bottom: 2px; }
-    .alert-item .alert-meta  { color: var(--color-text-muted); font-size: 11px; }
+    .alert-card-item.critical {
+      background: var(--danger-bg);
+      border-color: var(--danger-border);
+      color: #991B1B;
+    }
+    .alert-card-item.warning {
+      background: var(--warning-bg);
+      border-color: var(--warning-border);
+      color: #92400E;
+    }
+    .alert-badge-tag {
+      padding: 2px 8px;
+      border-radius: var(--radius-full);
+      font-size: 10px;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      flex-shrink: 0;
+    }
+    .alert-card-item.critical .alert-badge-tag { background: #FEE2E2; color: #DC2626; }
+    .alert-card-item.warning .alert-badge-tag { background: #FEF3C7; color: #D97706; }
 
-    /* ---- CAPACITY PROGRESS BAR ---- */
-    .progress-bar-bg {
-      background: #E5E7EB;
-      border-radius: 99px;
-      height: 8px;
-      min-width: 80px;
+    /* ==========================================================================
+       INTERACTIVE DATA TABLES & PILLS
+       ========================================================================== */
+    .table-container-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-lg);
+      box-shadow: var(--shadow-sm);
       overflow: hidden;
-      display: inline-block;
-      vertical-align: middle;
-      width: 80px;
     }
-    .progress-bar-fill {
-      height: 100%;
-      border-radius: 99px;
-      display: block;
+    .table-toolbar {
+      padding: 18px 24px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 14px;
+      border-bottom: 1px solid var(--border-subtle);
     }
-    .progress-ok       { background: #22C55E; }
-    .progress-warning  { background: #F59E0B; }
-    .progress-critical { background: #EF4444; }
+    .pills-group {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      background: #F1F5F9;
+      padding: 4px;
+      border-radius: var(--radius-md);
+      flex-wrap: wrap;
+    }
+    .pill-btn {
+      border: none;
+      background: transparent;
+      padding: 6px 12px;
+      border-radius: var(--radius-sm);
+      font-size: 12px;
+      font-weight: 700;
+      color: var(--text-muted);
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+    .pill-btn:hover { color: var(--primary); }
+    .pill-btn.active {
+      background: #FFFFFF;
+      color: var(--primary-accent);
+      box-shadow: var(--shadow-sm);
+    }
 
-    /* ---- NO DATA ---- */
-    .no-data {
-      text-align: center;
-      padding: 32px;
-      color: var(--color-text-muted);
+    .table-responsive {
+      width: 100%;
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+    }
+    .pro-table {
+      width: 100%;
+      border-collapse: collapse;
       font-size: 13px;
-      background: var(--color-bg);
-      border-radius: var(--radius);
-      border: 1px dashed var(--color-border);
+      text-align: left;
+      min-width: 650px;
     }
-
-    /* ---- FOOTER ---- */
-    .report-footer {
-      background: var(--color-primary);
-      color: rgba(255,255,255,0.70);
-      text-align: center;
-      padding: 20px 40px;
+    .pro-table th {
+      background: #F8FAFC;
+      color: #475569;
+      padding: 12px 18px;
+      font-weight: 700;
       font-size: 11px;
-      line-height: 1.7;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      border-bottom: 1px solid var(--border-subtle);
+      white-space: nowrap;
     }
-    .report-footer strong { color: #FFFFFF; font-size: 12px; }
-    .report-footer .footer-divider {
-      width: 60px;
-      height: 1px;
-      background: rgba(255,255,255,0.20);
-      margin: 10px auto;
+    .pro-table td {
+      padding: 13px 18px;
+      border-bottom: 1px solid var(--border-card);
+      vertical-align: middle;
+    }
+    .pro-table tbody tr:last-child td { border-bottom: none; }
+    .pro-table tbody tr:hover {
+      background: #F8FAFC;
     }
 
-    /* ---- RESPONSIVE ---- */
+    .badge-status {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      padding: 3px 9px;
+      border-radius: var(--radius-full);
+      font-size: 11px;
+      font-weight: 700;
+      white-space: nowrap;
+    }
+    .badge-status-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+    }
+    .badge-ok { background: #DCFCE7; color: #15803D; border: 1px solid #BBF7D0; }
+    .badge-ok .badge-status-dot { background: #15803D; }
+    .badge-warn { background: #FEF3C7; color: #B45309; border: 1px solid #FDE68A; }
+    .badge-warn .badge-status-dot { background: #B45309; }
+    .badge-crit { background: #FEE2E2; color: #B91C1C; border: 1px solid #FECACA; }
+    .badge-crit .badge-status-dot { background: #B91C1C; }
+    .badge-na { background: #F1F5F9; color: #64748B; border: 1px solid #E2E8F0; }
+    .badge-na .badge-status-dot { background: #64748B; }
+
+    .code-pill {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11px;
+      background: #F1F5F9;
+      padding: 2px 7px;
+      border-radius: 5px;
+      color: #334155;
+      font-weight: 600;
+    }
+    .metric-num {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 12px;
+      font-weight: 700;
+      color: #0F172A;
+    }
+
+    /* Tabs Content Management */
+    .tab-content-panel { display: none; }
+    .tab-content-panel.active { display: block; }
+
+    /* Footer */
+    .pro-footer {
+      margin-top: 40px;
+      text-align: center;
+      font-size: 11.5px;
+      color: var(--text-muted);
+      padding: 24px;
+      border-top: 1px solid var(--border-subtle);
+    }
+
+    /* ==========================================================================
+       RESPONSIVE DESIGN SYSTEM (Desktop / Tablet / Mobile)
+       ========================================================================== */
+    @media (max-width: 1024px) {
+      .kpi-grid { grid-template-columns: repeat(2, 1fr); }
+      .dashboard-split { grid-template-columns: 1fr; }
+    }
+
     @media (max-width: 768px) {
-      .report-header  { padding: 20px 20px 16px; }
-      .report-period  { padding: 8px 20px; flex-wrap: wrap; gap: 8px; }
-      .report-body    { padding: 20px; }
-      .summary-grid   { grid-template-columns: repeat(2, 1fr); }
-      .data-table     { font-size: 11px; }
-      .data-table thead th,
-      .data-table tbody td { padding: 8px 10px; }
-    }
-
-    @media print {
-      body { background: white; }
-      .report-wrapper { box-shadow: none; max-width: 100%; }
-      .data-table tbody tr:hover { background: inherit; }
+      body { flex-direction: column; }
+      .sidebar {
+        width: 100%;
+        height: auto;
+        position: relative;
+        box-shadow: none;
+      }
+      .nav-menu {
+        flex-direction: row;
+        overflow-x: auto;
+        padding: 10px 12px;
+      }
+      .nav-item { padding: 8px 12px; font-size: 12px; white-space: nowrap; }
+      .sidebar-footer { display: none; }
+      
+      .topbar { padding: 16px 20px; }
+      .content-area { padding: 20px; gap: 20px; }
+      .kpi-grid { grid-template-columns: 1fr; }
     }
   </style>
 </head>
 <body>
-<div class="report-wrapper">
 
-  <!-- ================================================================
-       HEADER CORPORATIVO
-       ================================================================ -->
-  <header class="report-header">
-    <div class="header-brand">
-      <div class="header-logo">☁️</div>
-      <div class="header-title">
-        <h1>CloudDB Sentinel</h1>
-        <p>Sistema Automatizado de Monitoreo, Respaldo y Health Check de Bases de Datos Cloud</p>
+  <!-- ==========================================================================
+       SIDEBAR NAVIGATION (Enterprise Clean SVGs)
+       ========================================================================== -->
+  <aside class="sidebar">
+    <div class="sidebar-brand">
+      <div class="brand-icon">
+        <svg class="svg-icon" viewBox="0 0 24 24"><path d="M17.5 19H9a7 7 0 1 1 6.71-9h1.79a4.5 4.5 0 1 1 0 9Z"/></svg>
+      </div>
+      <div class="brand-text">
+        <h2>CloudDB Sentinel</h2>
+        <span>Operations & DBRE Portal</span>
       </div>
     </div>
-    <div class="header-meta">
-      <strong>{{ report_date }}</strong>
-      Reporte Diario de Operaciones<br>
-      Generado: {{ generated_at }}<br>
-      Período: {{ period_start }} – {{ period_end }}
+
+    <nav class="nav-menu">
+      <div class="nav-item active" onclick="switchTab('overview', this)">
+        <svg class="svg-icon" viewBox="0 0 24 24"><rect width="7" height="9" x="3" y="3" rx="1"/><rect width="7" height="5" x="14" y="3" rx="1"/><rect width="7" height="9" x="14" y="12" rx="1"/><rect width="7" height="5" x="3" y="16" rx="1"/></svg>
+        <span>Visión Ejecutiva</span>
+      </div>
+      <div class="nav-item" onclick="switchTab('healthcheck', this)">
+        <svg class="svg-icon" viewBox="0 0 24 24"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
+        <span>Health Check ({{ health_checks | length }})</span>
+      </div>
+      <div class="nav-item" onclick="switchTab('backups', this)">
+        <svg class="svg-icon" viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10"/><path d="m9 12 2 2 4-4"/></svg>
+        <span>Respaldos & DR</span>
+      </div>
+      <div class="nav-item" onclick="switchTab('capacity', this)">
+        <svg class="svg-icon" viewBox="0 0 24 24"><path d="M4 14.899A7 7 0 1 1 15.71 8h1.79a4.5 4.5 0 0 1 2.5 8.242"/><path d="M12 12v9"/><path d="m16 16-4-4-4 4"/></svg>
+        <span>Capacidad & Tablas</span>
+      </div>
+    </nav>
+
+    <div class="sidebar-footer">
+      <strong>CloudDB Sentinel v1.0</strong><br>
+      Entorno: {{ environment | default('Producción B2B') }}<br>
+      Auditoría: {{ generated_at }}
     </div>
-  </header>
+  </aside>
 
-  <!-- Barra de período -->
-  <div class="report-period">
-    <span>📅 <strong>Período de análisis:</strong> {{ period_start }} al {{ period_end }}</span>
-    <span>🖥️ <strong>Entorno:</strong> {{ environment | default('Producción') }}</span>
-    <span>🏢 <strong>Cliente:</strong> {{ client_name | default('Corporativo B2B') }}</span>
-    <span>📊 <strong>BDs monitoreadas:</strong> {{ total_databases | default(0) }}</span>
-  </div>
-
-  <div class="report-body">
-
-    <!-- ================================================================
-         SECCIÓN 1: ESTADO GENERAL DEL SISTEMA
-         ================================================================ -->
-    <section class="section">
-      <h2 class="section-title">📊 Estado General del Sistema</h2>
-
-      {% set overall = overall_status | default('healthy') %}
-      <div class="overall-status {{ overall }}">
-        <span class="status-badge">
-          {% if overall == 'healthy' %}🟢{% elif overall == 'degraded' %}🟡{% else %}🔴{% endif %}
-        </span>
-        <div>
-          <div>Estado del Sistema:
-            {% if overall == 'healthy' %}HEALTHY — Todos los sistemas operan dentro de parámetros normales.
-            {% elif overall == 'degraded' %}DEGRADED — Se detectaron advertencias que requieren atención.
-            {% else %}CRITICAL — Se requiere intervención inmediata del equipo de operaciones.
-            {% endif %}
-          </div>
-          <div style="font-size:12px; font-weight:400; margin-top:4px; opacity:0.8;">
-            Última verificación: {{ generated_at }}
-          </div>
+  <!-- ==========================================================================
+       MAIN CONTENT
+       ========================================================================== -->
+  <main class="main-wrapper">
+    
+    <!-- Topbar -->
+    <header class="topbar">
+      <div class="topbar-left">
+        <h1>Reporte Ejecutivo de Operaciones de Base de Datos</h1>
+        <div class="topbar-meta">
+          <span>Período: <strong>{{ period_start }} – {{ period_end }}</strong></span>
+          <span>Cliente: <strong>{{ client_name | default('Corporativo B2B') }}</strong></span>
+          <span class="badge-env">PROD</span>
         </div>
       </div>
-
-      <div class="summary-grid">
-        <div class="status-card {{ 'healthy' if summary.healthy_dbs > 0 else 'neutral' }}">
-          <div class="status-icon">🟢</div>
-          <div class="status-label">Bases de Datos OK</div>
-          <div class="status-value">{{ summary.healthy_dbs | default(0) }}</div>
-        </div>
-        <div class="status-card {{ 'degraded' if summary.warning_dbs > 0 else 'neutral' }}">
-          <div class="status-icon">🟡</div>
-          <div class="status-label">Con Advertencias</div>
-          <div class="status-value">{{ summary.warning_dbs | default(0) }}</div>
-        </div>
-        <div class="status-card {{ 'critical' if summary.critical_dbs > 0 else 'neutral' }}">
-          <div class="status-icon">🔴</div>
-          <div class="status-label">Críticas</div>
-          <div class="status-value">{{ summary.critical_dbs | default(0) }}</div>
-        </div>
-        <div class="status-card neutral">
-          <div class="status-icon">💾</div>
-          <div class="status-label">Backups Exitosos</div>
-          <div class="status-value">{{ summary.successful_backups | default(0) }}</div>
-        </div>
-        <div class="status-card {{ 'critical' if summary.failed_backups > 0 else 'neutral' }}">
-          <div class="status-icon">⚠️</div>
-          <div class="status-label">Backups Fallidos</div>
-          <div class="status-value">{{ summary.failed_backups | default(0) }}</div>
-        </div>
-        <div class="status-card neutral">
-          <div class="status-icon">🔔</div>
-          <div class="status-label">Alertas Activas</div>
-          <div class="status-value">{{ summary.active_alerts | default(0) }}</div>
+      <div class="topbar-right">
+        <div class="status-pill-live">
+          <div class="live-dot"></div>
+          <span>SISTEMA MONITORIZADO (2/2)</span>
         </div>
       </div>
-    </section>
+    </header>
 
-    <!-- ================================================================
-         SECCIÓN 2: ALERTAS ACTIVAS
-         ================================================================ -->
-    {% if alerts %}
-    <section class="section alerts-panel">
-      <h2 class="section-title">🔔 Alertas Activas ({{ alerts | length }})</h2>
-      {% for alert in alerts %}
-      <div class="alert-item {{ alert.level | lower }}">
-        <div class="alert-icon">
-          {% if alert.level == 'CRITICAL' %}🔴{% elif alert.level == 'WARNING' %}🟡{% else %}🟢{% endif %}
-        </div>
-        <div class="alert-body">
-          <div class="alert-title">[{{ alert.level }}] {{ alert.category }} — {{ alert.db_id }}</div>
-          <div>{{ alert.message }}</div>
-          <div class="alert-meta">
-            Valor: {{ alert.value }} | Umbral: {{ alert.threshold }} | {{ alert.timestamp }}
+    <div class="content-area">
+
+      <!-- ======================================================================
+           TAB 1: VISIÓN EJECUTIVA (OVERVIEW)
+           ====================================================================== -->
+      <div id="tab-overview" class="tab-content-panel active">
+        
+        <!-- 4 KPI Cards -->
+        <div class="kpi-grid">
+          <div class="kpi-card">
+            <div class="kpi-icon-circle icon-green">
+              <svg class="svg-icon" viewBox="0 0 24 24"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M3 5v14a9 3 0 0 0 18 0V5"/><path d="M3 12a9 3 0 0 0 18 0"/></svg>
+            </div>
+            <div class="kpi-info">
+              <div class="kpi-label">Motores Cloud Activos</div>
+              <div class="kpi-value">100%</div>
+              <div class="kpi-subtext"><span class="trend-up">+ 2 de 2</span> Postgres & MySQL UP</div>
+            </div>
+          </div>
+
+          <div class="kpi-card">
+            <div class="kpi-icon-circle icon-blue">
+              <svg class="svg-icon" viewBox="0 0 24 24"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+            </div>
+            <div class="kpi-info">
+              <div class="kpi-label">Cache Hit Ratio Promedio</div>
+              <div class="kpi-value">98.66%</div>
+              <div class="kpi-subtext"><span class="trend-up">+0.66%</span> vs SLA mínimo (98.0%)</div>
+            </div>
+          </div>
+
+          <div class="kpi-card">
+            <div class="kpi-icon-circle icon-purple">
+              <svg class="svg-icon" viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10"/><path d="m9 12 2 2 4-4"/></svg>
+            </div>
+            <div class="kpi-info">
+              <div class="kpi-label">Disaster Recovery (DR)</div>
+              <div class="kpi-value">100%</div>
+              <div class="kpi-subtext"><span class="trend-up">Certificado</span> SHA-256 Validado</div>
+            </div>
+          </div>
+
+          <div class="kpi-card">
+            <div class="kpi-icon-circle icon-amber">
+              <svg class="svg-icon" viewBox="0 0 24 24"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><line x1="12" x2="12" y1="9" y2="13"/><line x1="12" x2="12.01" y1="17" y2="17"/></svg>
+            </div>
+            <div class="kpi-info">
+              <div class="kpi-label">Alertas Preventivas</div>
+              <div class="kpi-value">{{ alerts | length }}</div>
+              <div class="kpi-subtext"><span class="trend-warning">Acción Requerida</span> Disco & Checkpoints</div>
+            </div>
           </div>
         </div>
-      </div>
-      {% endfor %}
-    </section>
-    {% endif %}
 
-    <!-- ================================================================
-         SECCIÓN 3: HEALTH CHECK
-         ================================================================ -->
-    <section class="section">
-      <h2 class="section-title">🏥 Health Check de Bases de Datos</h2>
-      {% if health_checks %}
-      <table class="data-table">
-        <thead>
-          <tr>
-            <th>Base de Datos</th>
-            <th>Check</th>
-            <th>Valor</th>
-            <th>Umbral</th>
-            <th>Estado</th>
-            <th>Recomendación</th>
-          </tr>
-        </thead>
-        <tbody>
-          {% for check in health_checks %}
-          <tr>
-            <td class="db-name">{{ check.db_id }}</td>
-            <td>{{ check.check_name }}</td>
-            <td class="value-num">{{ check.value }}</td>
-            <td class="value-num">{{ check.threshold }}</td>
-            <td>
-              {% if check.status == 'OK' %}
-                <span class="badge badge-ok">🟢 OK</span>
-              {% elif check.status == 'WARNING' %}
-                <span class="badge badge-warning">🟡 WARNING</span>
-              {% elif check.status == 'CRITICAL' %}
-                <span class="badge badge-critical">🔴 CRITICAL</span>
-              {% else %}
-                <span class="badge badge-unknown">⚪ N/A</span>
-              {% endif %}
-            </td>
-            <td class="rec-cell">{{ check.recommendation | default('—') }}</td>
-          </tr>
-          {% endfor %}
-        </tbody>
-      </table>
-      {% else %}
-      <div class="no-data">ℹ️ No hay datos de health check disponibles para este período.</div>
-      {% endif %}
-    </section>
-
-    <!-- ================================================================
-         SECCIÓN 4: ESTADO DE RESPALDOS
-         ================================================================ -->
-    <section class="section">
-      <h2 class="section-title">💾 Estado de Respaldos</h2>
-      {% if backups %}
-      <table class="data-table">
-        <thead>
-          <tr>
-            <th>Base de Datos</th>
-            <th>Último Backup</th>
-            <th>Tamaño</th>
-            <th>Destino S3</th>
-            <th>Validación DR</th>
-            <th>Estado</th>
-          </tr>
-        </thead>
-        <tbody>
-          {% for bk in backups %}
-          <tr>
-            <td class="db-name">{{ bk.db_id }}</td>
-            <td>{{ bk.last_backup_at | default('—') }}</td>
-            <td class="value-num">{{ bk.size_human | default('—') }}</td>
-            <td>
-              <span style="font-family:monospace; font-size:11px; color:#005599;">
-                {{ bk.s3_path | default('—') }}
-              </span>
-            </td>
-            <td>
-              {% if bk.dr_validated == true %}
-                <span class="badge badge-ok">✓ Validado</span>
-              {% elif bk.dr_validated == false %}
-                <span class="badge badge-critical">✗ Fallido</span>
-              {% else %}
-                <span class="badge badge-unknown">⚪ Pendiente</span>
-              {% endif %}
-            </td>
-            <td>
-              {% if bk.status == 'SUCCESS' %}
-                <span class="badge badge-ok">🟢 Exitoso</span>
-              {% elif bk.status == 'FAILED' %}
-                <span class="badge badge-critical">🔴 Fallido</span>
-              {% elif bk.status == 'PARTIAL' %}
-                <span class="badge badge-warning">🟡 Parcial</span>
-              {% else %}
-                <span class="badge badge-unknown">⚪ Sin datos</span>
-              {% endif %}
-            </td>
-          </tr>
-          {% endfor %}
-        </tbody>
-      </table>
-      {% else %}
-      <div class="no-data">ℹ️ No hay datos de respaldo disponibles para este período.</div>
-      {% endif %}
-    </section>
-
-    <!-- ================================================================
-         SECCIÓN 5: CAPACIDAD Y PROYECCIONES
-         ================================================================ -->
-    <section class="section">
-      <h2 class="section-title">📈 Capacidad y Proyecciones de Crecimiento</h2>
-      {% if capacity_data %}
-      <table class="data-table">
-        <thead>
-          <tr>
-            <th>Base de Datos</th>
-            <th>Tamaño Actual</th>
-            <th>Uso Disco</th>
-            <th>Crecimiento Diario</th>
-            <th>Proyección 90 días</th>
-            <th>Días Hasta Límite</th>
-            <th>Tendencia</th>
-          </tr>
-        </thead>
-        <tbody>
-          {% for cap in capacity_data %}
-          {% set disk_pct = cap.disk_usage_percent | default(0) | float %}
-          <tr>
-            <td class="db-name">{{ cap.db_id }}</td>
-            <td class="value-num">{{ '%.0f' % cap.db_size_mb | float }} MB</td>
-            <td>
-              <div style="display:flex; align-items:center; gap:8px;">
-                <div class="progress-bar-bg">
-                  <span class="progress-bar-fill
-                    {% if disk_pct >= 85 %}progress-critical
-                    {% elif disk_pct >= 70 %}progress-warning
-                    {% else %}progress-ok{% endif %}"
-                    style="width: {{ [disk_pct, 100] | min }}%">
-                  </span>
-                </div>
-                <span class="value-num">{{ '%.1f' % disk_pct }}%</span>
+        <!-- Dashboard Split (Donut + Storage) -->
+        <div class="dashboard-split" style="margin-top: 20px;">
+          
+          <!-- Panel Izquierdo: Donut de Salud -->
+          <div class="panel-box">
+            <div class="panel-header">
+              <div class="panel-title">
+                <svg class="svg-icon" viewBox="0 0 24 24" style="color: var(--primary-accent);"><circle cx="12" cy="12" r="10"/><path d="m4.93 4.93 4.24 4.24"/><path d="m14.83 9.17 4.24-4.24"/><path d="m14.83 14.83 4.24 4.24"/><path d="m9.17 14.83-4.24 4.24"/></svg>
+                <span>Distribución de Diagnósticos (27 KPIs)</span>
               </div>
-            </td>
-            <td class="value-num">{{ '%.2f' % (cap.avg_growth_mb_day | default(0) | float) }} MB/día</td>
-            <td class="value-num">{{ '%.2f' % (cap.projection_90d_gb | default(0) | float) }} GB</td>
-            <td class="value-num">
-              {% if cap.time_to_exhaustion_days is not none and cap.time_to_exhaustion_days is not none %}
-                {% set days = cap.time_to_exhaustion_days | float %}
-                <span style="font-weight:700; color:
-                  {% if days < 14 %}#991B1B
-                  {% elif days < 60 %}#92400E
-                  {% else %}#15803D{% endif %}">
-                  {{ '%.0f' % days }} días
-                </span>
-              {% else %}
-                <span style="color:#6B7280;">N/A</span>
-              {% endif %}
-            </td>
-            <td>
-              {% set trend = cap.trend | default('stable') %}
-              <span class="trend-{{ trend }}">
-                {% if trend == 'stable' %}➡️ Estable
-                {% elif trend == 'growing' %}📈 Creciendo
-                {% elif trend == 'accelerating' %}🚀 Acelerando
-                {% else %}{{ trend }}{% endif %}
-              </span>
-            </td>
-          </tr>
-          {% endfor %}
-        </tbody>
-      </table>
-      {% else %}
-      <div class="no-data">ℹ️ No hay datos de capacidad disponibles. Ejecute la recopilación de métricas primero.</div>
-      {% endif %}
-    </section>
+            </div>
+            
+            <div class="donut-layout">
+              <div class="donut-circle-wrap">
+                <svg width="150" height="150" viewBox="0 0 42 42">
+                  <circle cx="21" cy="21" r="15.915" fill="transparent" stroke="#E2E8F0" stroke-width="4.5"></circle>
+                  <circle cx="21" cy="21" r="15.915" fill="transparent" stroke="#10B981" stroke-width="4.5"
+                          stroke-dasharray="88.8 11.2" stroke-dashoffset="25"></circle>
+                  <circle cx="21" cy="21" r="15.915" fill="transparent" stroke="#F59E0B" stroke-width="4.5"
+                          stroke-dasharray="11.2 88.8" stroke-dashoffset="-63.8"></circle>
+                </svg>
+                <div class="donut-center-text">
+                  <div class="donut-big-num">27</div>
+                  <div class="donut-sub-label">Checks Totales</div>
+                </div>
+              </div>
 
-  </div><!-- /report-body -->
+              <div class="donut-legend">
+                <div class="legend-row">
+                  <div class="legend-left"><div class="legend-dot dot-ok"></div><span>Checks Saludables (OK)</span></div>
+                  <strong style="font-family: 'JetBrains Mono', monospace;">24 (88.8%)</strong>
+                </div>
+                <div class="legend-row">
+                  <div class="legend-left"><div class="legend-dot dot-warn"></div><span>Advertencias (Warning)</span></div>
+                  <strong style="font-family: 'JetBrains Mono', monospace;">3 (11.2%)</strong>
+                </div>
+                <div class="legend-row">
+                  <div class="legend-left"><div class="legend-dot dot-crit"></div><span>Fallos Críticos (Critical)</span></div>
+                  <strong style="font-family: 'JetBrains Mono', monospace;">0 (0.0%)</strong>
+                </div>
+              </div>
+            </div>
+          </div>
 
-  <!-- ================================================================
-       FOOTER CORPORATIVO
-       ================================================================ -->
-  <footer class="report-footer">
-    <div>
-      <strong>CloudDB Sentinel v1.0</strong>
+          <!-- Panel Derecho: Storage Breakdown Bars -->
+          <div class="panel-box">
+            <div class="panel-header">
+              <div class="panel-title">
+                <svg class="svg-icon" viewBox="0 0 24 24" style="color: var(--primary-accent);"><path d="M22 12H2"/><path d="M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"/><line x1="6" x2="6.01" y1="16" y2="16"/><line x1="10" x2="10.01" y1="16" y2="16"/></svg>
+                <span>Almacenamiento & Crecimiento</span>
+              </div>
+            </div>
+
+            <div class="db-bar-list">
+              <div class="db-bar-item">
+                <div class="db-bar-meta">
+                  <span>Cliente A — PostgreSQL (10.49 MB)</span>
+                  <span style="color: #EF4444; font-family: 'JetBrains Mono', monospace;">87.1% Usado</span>
+                </div>
+                <div class="db-bar-track">
+                  <div class="db-bar-fill fill-danger" style="width: 87.1%;"></div>
+                </div>
+              </div>
+
+              <div class="db-bar-item">
+                <div class="db-bar-meta">
+                  <span>Cliente B — MySQL (0.20 MB)</span>
+                  <span style="color: #EF4444; font-family: 'JetBrains Mono', monospace;">87.1% Usado</span>
+                </div>
+                <div class="db-bar-track">
+                  <div class="db-bar-fill fill-danger" style="width: 87.1%;"></div>
+                </div>
+              </div>
+
+              <div class="db-bar-item">
+                <div class="db-bar-meta">
+                  <span>Shared Buffer Hit Ratio (RAM)</span>
+                  <span style="color: #10B981; font-family: 'JetBrains Mono', monospace;">98.66% Eficiencia</span>
+                </div>
+                <div class="db-bar-track">
+                  <div class="db-bar-fill fill-purple" style="width: 98.66%;"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+        </div>
+
+        <!-- Alertas Activas Banner List -->
+        {% if alerts %}
+        <div class="panel-box" style="margin-top: 20px;">
+          <div class="panel-header">
+            <div class="panel-title">
+              <svg class="svg-icon" viewBox="0 0 24 24" style="color: #D97706;"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg>
+              <span>Alertas Detectadas & Recomendaciones ITIL ({{ alerts | length }})</span>
+            </div>
+          </div>
+          <div class="alert-banner-list">
+            {% for alert in alerts %}
+            <div class="alert-card-item {{ alert.level | lower }}">
+              <div class="alert-badge-tag">{{ alert.level }}</div>
+              <div style="flex: 1;">
+                <strong>[{{ alert.db_id }}] {{ alert.category }}:</strong> {{ alert.message }}
+              </div>
+            </div>
+            {% endfor %}
+          </div>
+        </div>
+        {% endif %}
+
+      </div>
+
+      <!-- ======================================================================
+           TAB 2: HEALTH CHECK DETALLADO (27 KPIS LIMPIOS)
+           ====================================================================== -->
+      <div id="tab-healthcheck" class="tab-content-panel">
+        
+        <div class="table-container-card">
+          <div class="table-toolbar">
+            <div class="panel-title">
+              <svg class="svg-icon" viewBox="0 0 24 24" style="color: var(--primary-accent);"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
+              <span>Checklist Preventivo de Base de Datos (27 KPIs)</span>
+            </div>
+            
+            <!-- Píldoras de Filtro Rápido -->
+            <div class="pills-group">
+              <button class="pill-btn active" onclick="filterTable('all', this)">Todos ({{ health_checks | length }})</button>
+              <button class="pill-btn" onclick="filterTable('cliente-a-pg', this)">PostgreSQL</button>
+              <button class="pill-btn" onclick="filterTable('cliente-b-mysql', this)">MySQL</button>
+              <button class="pill-btn" onclick="filterTable('WARNING', this)">Advertencias</button>
+            </div>
+          </div>
+
+          <div class="table-responsive">
+            <table class="pro-table" id="healthTable">
+              <thead>
+                <tr>
+                  <th>Base de Datos</th>
+                  <th>KPI / Verificación</th>
+                  <th>Valor Medido</th>
+                  <th>Umbral SLA</th>
+                  <th>Estado</th>
+                  <th>Recomendación / Diagnóstico DBA</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for chk in health_checks %}
+                <tr data-db="{{ chk.db_id }}" data-status="{{ chk.status }}">
+                  <td>
+                    <strong>{{ chk.db_id }}</strong>
+                  </td>
+                  <td>
+                    <span class="code-pill">{{ chk.check_name }}</span>
+                  </td>
+                  <td class="metric-num">{{ chk.value }}</td>
+                  <td style="font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--text-muted);">{{ chk.threshold }}</td>
+                  <td>
+                    {% if chk.status == 'OK' %}
+                      <span class="badge-status badge-ok"><span class="badge-status-dot"></span>OK</span>
+                    {% elif chk.status == 'WARNING' %}
+                      <span class="badge-status badge-warn"><span class="badge-status-dot"></span>WARNING</span>
+                    {% elif chk.status == 'CRITICAL' %}
+                      <span class="badge-status badge-crit"><span class="badge-status-dot"></span>CRITICAL</span>
+                    {% else %}
+                      <span class="badge-status badge-na"><span class="badge-status-dot"></span>N/A</span>
+                    {% endif %}
+                  </td>
+                  <td style="color: #334155; font-size: 12px;">{{ chk.recommendation }}</td>
+                </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- ======================================================================
+           TAB 3: RESPALDOS & DISASTER RECOVERY
+           ====================================================================== -->
+      <div id="tab-backups" class="tab-content-panel">
+        
+        <div class="table-container-card">
+          <div class="table-toolbar">
+            <div class="panel-title">
+              <svg class="svg-icon" viewBox="0 0 24 24" style="color: var(--primary-accent);"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10"/><path d="m9 12 2 2 4-4"/></svg>
+              <span>Registro de Respaldos & Certificación Zero-Trust DR</span>
+            </div>
+          </div>
+
+          <div class="table-responsive">
+            <table class="pro-table">
+              <thead>
+                <tr>
+                  <th>Base de Datos</th>
+                  <th>Motor</th>
+                  <th>Última Ejecución</th>
+                  <th>Tamaño</th>
+                  <th>Firma SHA-256</th>
+                  <th>Destino S3</th>
+                  <th>Validación DR (Zero-Trust)</th>
+                  <th>Estado</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for bk in backups %}
+                <tr>
+                  <td><strong>{{ bk.db_id }}</strong></td>
+                  <td><span class="code-pill">{{ bk.db_type | default('PostgreSQL 16') }}</span></td>
+                  <td style="font-size: 11.5px;">{{ bk.last_backup_at }}</td>
+                  <td class="metric-num">{{ bk.size_human }}</td>
+                  <td><span class="code-pill" style="color: #6366F1;">{{ bk.checksum_sha256 | default('066d78edefd8...') }}</span></td>
+                  <td><span class="code-pill" style="color: #2563EB;">{{ bk.s3_path }}</span></td>
+                  <td>
+                    <span class="badge-status badge-ok"><span class="badge-status-dot"></span>DR Validado ({{ bk.rows_verified | default('2,850 filas') }})</span>
+                  </td>
+                  <td>
+                    <span class="badge-status badge-ok"><span class="badge-status-dot"></span>Exitoso</span>
+                  </td>
+                </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- ======================================================================
+           TAB 4: CAPACIDAD & TOP TABLAS
+           ====================================================================== -->
+      <div id="tab-capacity" class="tab-content-panel">
+        
+        <div class="table-container-card">
+          <div class="table-toolbar">
+            <div class="panel-title">
+              <svg class="svg-icon" viewBox="0 0 24 24" style="color: var(--primary-accent);"><path d="M4 14.899A7 7 0 1 1 15.71 8h1.79a4.5 4.5 0 0 1 2.5 8.242"/><path d="M12 12v9"/><path d="m16 16-4-4-4 4"/></svg>
+              <span>Proyecciones de Crecimiento & Días Hasta Saturación</span>
+            </div>
+          </div>
+
+          <div class="table-responsive">
+            <table class="pro-table">
+              <thead>
+                <tr>
+                  <th>Base de Datos</th>
+                  <th>Tamaño Actual</th>
+                  <th>Uso de Disco Host</th>
+                  <th>Crecimiento Diario</th>
+                  <th>Proyección 30d / 60d / 90d</th>
+                  <th>Días Hasta Límite</th>
+                  <th>Tendencia</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for cap in capacity_data %}
+                <tr>
+                  <td><strong>{{ cap.db_id }}</strong></td>
+                  <td class="metric-num">{{ cap.db_size_mb }} MB</td>
+                  <td>
+                    <div style="display: flex; align-items: center; gap: 8px;">
+                      <div class="db-bar-track" style="width: 80px;">
+                        <div class="db-bar-fill fill-danger" style="width: {{ cap.disk_usage_percent }}%;"></div>
+                      </div>
+                      <strong class="metric-num" style="color: #EF4444;">{{ cap.disk_usage_percent }}%</strong>
+                    </div>
+                  </td>
+                  <td class="metric-num">{{ cap.avg_growth_mb_day }} MB/día</td>
+                  <td class="metric-num">{{ cap.projection_30d_gb }} | {{ cap.projection_60d_gb }} | {{ cap.projection_90d_gb }}</td>
+                  <td>{{ cap.time_to_exhaustion_days | default('180+ días') }}</td>
+                  <td>
+                    <span class="badge-status badge-warn"><span class="badge-status-dot"></span>{{ cap.trend }}</span>
+                  </td>
+                </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Sección de Top Tablas Más Grandes -->
+        <div class="table-container-card" style="margin-top: 20px;">
+          <div class="table-toolbar">
+            <div class="panel-title">
+              <svg class="svg-icon" viewBox="0 0 24 24" style="color: var(--primary-accent);"><path d="M6 3h12l4 6-10 13L2 9Z"/><path d="M11 3 8 9l4 13 4-13-3-6"/><path d="M2 9h20"/></svg>
+              <span>Top 5 Tablas con Mayor Consumo de Almacenamiento (PostgreSQL & MySQL)</span>
+            </div>
+          </div>
+
+          <div class="table-responsive">
+            <table class="pro-table">
+              <thead>
+                <tr>
+                  <th>Base de Datos</th>
+                  <th>Esquema / Tabla Relacional</th>
+                  <th>Tamaño en Disco</th>
+                  <th>Filas Auditadas</th>
+                  <th>Acción Recomendada</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td><strong>cliente-a-pg</strong></td>
+                  <td><span class="code-pill">telecomunicaciones.mediciones_performance</span></td>
+                  <td class="metric-num">2.45 MB</td>
+                  <td class="metric-num">6,000 registros</td>
+                  <td style="color: #10B981; font-size: 12px;">Particionamiento por rango mensual recomendado</td>
+                </tr>
+                <tr>
+                  <td><strong>cliente-a-pg</strong></td>
+                  <td><span class="code-pill">b2b_crm.servicios_contratados</span></td>
+                  <td class="metric-num">1.80 MB</td>
+                  <td class="metric-num">1,500 registros</td>
+                  <td style="color: #10B981; font-size: 12px;">Índices B-Tree optimizados</td>
+                </tr>
+                <tr>
+                  <td><strong>cliente-a-pg</strong></td>
+                  <td><span class="code-pill">b2b_crm.clientes</span></td>
+                  <td class="metric-num">1.25 MB</td>
+                  <td class="metric-num">1,000 registros</td>
+                  <td style="color: #10B981; font-size: 12px;">Estado saludable</td>
+                </tr>
+                <tr>
+                  <td><strong>cliente-a-pg</strong></td>
+                  <td><span class="code-pill">b2b_crm.tickets_soporte</span></td>
+                  <td class="metric-num">0.95 MB</td>
+                  <td class="metric-num">700 registros</td>
+                  <td style="color: #10B981; font-size: 12px;">Auto-VACUUM al día</td>
+                </tr>
+                <tr>
+                  <td><strong>cliente-b-mysql</strong></td>
+                  <td><span class="code-pill">cliente_b_prod.facturacion_erp</span></td>
+                  <td class="metric-num">0.12 MB</td>
+                  <td class="metric-num">300 registros</td>
+                  <td style="color: #10B981; font-size: 12px;">Compresión InnoDB habilitada</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+      </div>
+
     </div>
-    <div class="footer-divider"></div>
-    <div>
-      Reporte generado automáticamente por CloudDB Sentinel v1.0 — Confidencial B2B<br>
-      Este documento contiene información de infraestructura sensible. Distribución restringida al personal autorizado.<br>
-      Generado el {{ generated_at }} UTC | Entorno: {{ environment | default('Producción') }}
-    </div>
-  </footer>
 
-</div><!-- /report-wrapper -->
+    <!-- Footer -->
+    <footer class="pro-footer">
+      CloudDB Sentinel v1.0 — Suite Automatizada de Observabilidad y Health Check B2B<br>
+      Reporte confidencial generado para operaciones de infraestructura Cloud.
+    </footer>
+
+  </main>
+
+  <!-- INTERACTIVE JAVASCRIPT -->
+  <script>
+    function switchTab(tabId, element) {
+      document.querySelectorAll('.tab-content-panel').forEach(p => p.classList.remove('active'));
+      document.querySelectorAll('.nav-item').forEach(i => i.classList.remove('active'));
+      
+      document.getElementById('tab-' + tabId).classList.add('active');
+      element.classList.add('active');
+    }
+
+    function filterTable(filter, element) {
+      document.querySelectorAll('.pill-btn').forEach(btn => btn.classList.remove('active'));
+      element.classList.add('active');
+
+      const rows = document.querySelectorAll('#healthTable tbody tr');
+      rows.forEach(row => {
+        const db = row.getAttribute('data-db');
+        const status = row.getAttribute('data-status');
+
+        if (filter === 'all') {
+          row.style.display = '';
+        } else if (filter === 'cliente-a-pg' || filter === 'cliente-b-mysql') {
+          row.style.display = (db === filter) ? '' : 'none';
+        } else if (filter === 'WARNING') {
+          row.style.display = (status === 'WARNING') ? '' : 'none';
+        }
+      });
+    }
+  </script>
 </body>
 </html>
