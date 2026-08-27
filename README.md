@@ -191,7 +191,6 @@ El proyecto incluye documentación técnica de nivel corporativo para auditar y 
 - [SOP-DBA-001: Rutina Diaria de Health Check](file:///docs/SOP_HEALTH_CHECK.md)
 - [SOP-DBA-002: Gestión de Respaldos y Recuperación ante Desastres](file:///docs/SOP_BACKUP_RESTORE.md)
 - [POL-CAP-001: Política de Gestión de Capacidad y SLAs](file:///docs/CAPACITY_MANAGEMENT.md)
-- [GUIA-ENTREVISTA: Guión de Entrevista Técnica y Metodología STAR](file:///docs/INTERVIEW_GUIDE.md)
 
 ---
 

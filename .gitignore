@@ -72,8 +72,13 @@ htmlcov/
 # IDEs y Editores de Código
 .vscode/
 .idea/
-*.swp
-*.swo
-*~
 .DS_Store
 Thumbs.db
+
+# Notas Privadas de Estudio y Preparación Personal (Obsidian / Prompts)
+notes/
+study/
+*.study.md
+*.private.*
+*PROMPT*
+*prompt*
