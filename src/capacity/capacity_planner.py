@@ -14,12 +14,19 @@ import json
 import logging
 import os
 import math
+import subprocess
 from dataclasses import dataclass, field, asdict
 from datetime import datetime, timedelta
 from typing import Optional
 
 import psycopg2
 import mysql.connector
+
+try:
+    from dotenv import load_dotenv
+    load_dotenv()
+except ImportError:
+    pass
 
 # ---------------------------------------------------------------------------
 # Configuración del logger estructurado
@@ -180,74 +187,87 @@ def _save_snapshot(snapshot: CapacitySnapshot) -> int:
 def _get_postgres_metrics(db_config: dict) -> tuple[float, list]:
     """
     Consulta el tamaño de la BD y las tablas más grandes en PostgreSQL.
-
-    Args:
-        db_config: Diccionario con keys: host, port, database, user, password.
-
-    Returns:
-        Tupla (db_size_mb, largest_tables).
     """
-    conn = psycopg2.connect(
-        host=db_config.get("host", "localhost"),
-        port=db_config.get("port", 5432),
-        database=db_config["database"],
-        user=db_config["user"],
-        password=db_config["password"],
-        connect_timeout=10,
-    )
+    creds = db_config.get("credentials", {})
+    user = creds.get("username", db_config.get("user", db_config.get("username", os.getenv("POSTGRES_USER", "admin_cloud"))))
+    password = creds.get("password", db_config.get("password", os.getenv("POSTGRES_PASSWORD", "")))
+    database = db_config.get("database", db_config.get("dbname", os.getenv("POSTGRES_DB", "cliente_a_prod")))
+    host = db_config.get("host", os.getenv("POSTGRES_HOST", "127.0.0.1"))
+    port = int(db_config.get("port", os.getenv("POSTGRES_PORT", 5432)))
+    params = {
+        "host": host,
+        "port": port,
+        "database": database,
+        "user": user,
+        "password": password,
+        "connect_timeout": 10,
+    }
     try:
-        with conn.cursor() as cur:
-            # Tamaño total de la base de datos en MB
-            cur.execute(
-                "SELECT pg_database_size(current_database()) / 1048576.0 AS size_mb"
-            )
-            db_size_mb = float(cur.fetchone()[0])
+        conn = psycopg2.connect(**params)
+        try:
+            with conn.cursor() as cur:
+                cur.execute("SELECT pg_database_size(current_database()) / 1048576.0 AS size_mb")
+                db_size_mb = float(cur.fetchone()[0])
+                cur.execute("""
+                    SELECT
+                        schemaname || '.' || tablename AS tabla,
+                        pg_total_relation_size(schemaname || '.' || tablename) / 1048576.0 AS size_mb
+                    FROM pg_tables
+                    WHERE schemaname NOT IN ('pg_catalog', 'information_schema')
+                    ORDER BY 2 DESC
+                    LIMIT 10
+                """)
+                largest_tables = [
+                    {"tabla": row[0], "size_mb": round(float(row[1]), 3)}
+                    for row in cur.fetchall()
+                ]
+            return db_size_mb, largest_tables
+        finally:
+            conn.close()
+    except Exception:
+        # Fallback a docker exec
+        cmd_size = ["docker", "exec", "clouddb-postgres-client-a", "psql", "-U", user, "-d", database, "-t", "-A", "-c", "SELECT pg_database_size(current_database()) / 1048576.0;"]
+        proc_s = subprocess.run(cmd_size, capture_output=True, text=True, timeout=15)
+        db_size_mb = float(proc_s.stdout.strip()) if proc_s.returncode == 0 and proc_s.stdout.strip() else 0.0
 
-            # Top 10 tablas más grandes
-            cur.execute("""
-                SELECT
-                    schemaname || '.' || tablename AS tabla,
-                    pg_total_relation_size(schemaname || '.' || tablename) / 1048576.0 AS size_mb
-                FROM pg_tables
-                WHERE schemaname NOT IN ('pg_catalog', 'information_schema')
-                ORDER BY 2 DESC
-                LIMIT 10
-            """)
-            largest_tables = [
-                {"tabla": row[0], "size_mb": round(float(row[1]), 3)}
-                for row in cur.fetchall()
-            ]
+        cmd_tab = ["docker", "exec", "clouddb-postgres-client-a", "psql", "-U", user, "-d", database, "-t", "-A", "-F", "\t", "-c", "SELECT schemaname || '.' || tablename, pg_total_relation_size(schemaname || '.' || tablename) / 1048576.0 FROM pg_tables WHERE schemaname NOT IN ('pg_catalog', 'information_schema') ORDER BY 2 DESC LIMIT 10;"]
+        proc_t = subprocess.run(cmd_tab, capture_output=True, text=True, timeout=15)
+        largest_tables = []
+        if proc_t.returncode == 0 and proc_t.stdout.strip():
+            for line in proc_t.stdout.strip().splitlines():
+                parts = line.split("\t")
+                if len(parts) >= 2:
+                    largest_tables.append({"tabla": parts[0], "size_mb": round(float(parts[1]), 3)})
         return db_size_mb, largest_tables
-    finally:
-        conn.close()
 
 
 def _get_mysql_metrics(db_config: dict) -> tuple[float, list]:
     """
     Consulta el tamaño de la BD y las tablas más grandes en MySQL/MariaDB.
-
-    Args:
-        db_config: Diccionario con keys: host, port, database, user, password.
-
-    Returns:
-        Tupla (db_size_mb, largest_tables).
     """
+    creds = db_config.get("credentials", {})
+    user = creds.get("username", db_config.get("user", db_config.get("username", os.getenv("MYSQL_USER", "admin_mysql"))))
+    password = creds.get("password", db_config.get("password", os.getenv("MYSQL_PASSWORD", "")))
+    database = db_config.get("database", db_config.get("dbname", os.getenv("MYSQL_DB", "cliente_b_prod")))
+    host = db_config.get("host", os.getenv("MYSQL_HOST", "127.0.0.1"))
+    port = int(db_config.get("port", os.getenv("MYSQL_PORT", 3307)))
+
     conn = mysql.connector.connect(
-        host=db_config.get("host", "localhost"),
-        port=db_config.get("port", 3306),
-        database=db_config["database"],
-        user=db_config["user"],
-        password=db_config["password"],
+        host=host,
+        port=port,
+        database=database,
+        user=user,
+        password=password,
         connection_timeout=10,
     )
     try:
         cursor = conn.cursor()
         # Tamaño total de la base de datos en MB
         cursor.execute("""
-            SELECT SUM(data_length + index_length) / 1048576.0 AS size_mb
+            SELECT COALESCE(SUM(data_length + index_length), 0) / 1048576.0 AS size_mb
             FROM information_schema.tables
             WHERE table_schema = %s
-        """, (db_config["database"],))
+        """, (database,))
         row = cursor.fetchone()
         db_size_mb = float(row[0]) if row and row[0] else 0.0
 
@@ -260,7 +280,7 @@ def _get_mysql_metrics(db_config: dict) -> tuple[float, list]:
             WHERE table_schema = %s
             ORDER BY size_mb DESC
             LIMIT 10
-        """, (db_config["database"],))
+        """, (database,))
         largest_tables = [
             {"tabla": row[0], "size_mb": round(float(row[1]), 3)}
             for row in cursor.fetchall()
@@ -336,9 +356,9 @@ def collect_current_metrics(db_config: dict) -> CapacitySnapshot:
         ValueError: Si 'engine' no es reconocido.
         Exception: Si la conexión a la BD falla.
     """
-    db_id = db_config.get("db_id", db_config.get("database", "unknown"))
-    engine = db_config.get("engine", "postgresql").lower()
-    timestamp = datetime.utcnow().isoformat()
+    db_id = db_config.get("id", db_config.get("db_id", db_config.get("database", "unknown")))
+    engine = db_config.get("type", db_config.get("engine", "postgresql")).lower()
+    timestamp = datetime.now().isoformat()
 
     logger.info("Iniciando recopilación de métricas de capacidad | db_id=%s | engine=%s", db_id, engine)
 
@@ -913,11 +933,13 @@ def run_capacity_collection_all() -> dict:
     """
     Recorre el inventario de bases de datos configuradas y recopila las métricas
     de capacidad de todas ellas. Lee el inventario desde config/databases.yaml.
-
-    Returns:
-        Diccionario con resultados: {'success': [...], 'failed': [...]}
     """
     import yaml
+    try:
+        from dotenv import load_dotenv
+        load_dotenv()
+    except ImportError:
+        pass
 
     inventory_path = os.path.join(BASE_DIR, "config", "databases.yaml")
 
@@ -926,9 +948,19 @@ def run_capacity_collection_all() -> dict:
         return {"success": [], "failed": [{"error": f"Inventario no encontrado: {inventory_path}"}]}
 
     with open(inventory_path, "r", encoding="utf-8") as f:
-        config = yaml.safe_load(f)
+        raw_text = f.read()
+        for key, value in os.environ.items():
+            raw_text = raw_text.replace(f"${{{key}}}", value)
+        config = yaml.safe_load(raw_text) or {}
 
-    databases = config.get("databases", [])
+    raw_dbs = config.get("databases", [])
+    if isinstance(raw_dbs, dict):
+        databases = [{"id": k, **v} for k, v in raw_dbs.items()]
+    elif isinstance(raw_dbs, list):
+        databases = raw_dbs
+    else:
+        databases = []
+
     if not databases:
         logger.warning("No se encontraron bases de datos en el inventario.")
         return {"success": [], "failed": []}
@@ -936,7 +968,7 @@ def run_capacity_collection_all() -> dict:
     results = {"success": [], "failed": []}
 
     for db_conf in databases:
-        db_id = db_conf.get("db_id", db_conf.get("database", "unknown"))
+        db_id = db_conf.get("id", db_conf.get("db_id", "unknown"))
         try:
             logger.info("Recopilando métricas de capacidad para: %s", db_id)
             snapshot = collect_current_metrics(db_conf)
@@ -963,10 +995,11 @@ def run_capacity_collection_all() -> dict:
 
 if __name__ == "__main__":
     """
-    Ejecución directa para pruebas. Genera un reporte de capacidad de todas las BDs.
+    Ejecución directa para pruebas. Recopila y genera un reporte de capacidad de todas las BDs.
     """
     import sys
     print("=== CloudDB Sentinel - Capacity Planner ===")
+    run_capacity_collection_all()
     db_arg = sys.argv[1] if len(sys.argv) > 1 else None
     report = generate_capacity_report(db_id=db_arg)
     print(f"Reporte generado: {report.generated_at}")

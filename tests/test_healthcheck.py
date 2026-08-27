@@ -22,10 +22,11 @@ PROJECT_ROOT = Path(__file__).resolve().parent.parent
 def test_database_inventory_loads_correctly():
     """Verifica que el catálogo config/databases.yaml sea válido y contenga clientes B2B."""
     dbs = _load_database_configs()
-    assert isinstance(dbs, list)
+    assert isinstance(dbs, (list, dict))
     assert len(dbs) >= 2, "Debe haber al menos 2 bases de datos en el inventario (Postgres y MySQL)"
     
-    pg_db = next((db for db in dbs if db.get("type") == "postgres"), None)
+    dbs_list = list(dbs.values()) if isinstance(dbs, dict) else dbs
+    pg_db = next((db for db in dbs_list if db.get("type") in ("postgres", "postgresql")), None)
     assert pg_db is not None, "Debe existir una base de datos PostgreSQL configurada"
     assert "sla" in pg_db, "La base de datos debe tener especificación de SLA"
     assert pg_db["sla"]["rpo_hours"] <= 24

@@ -25,6 +25,12 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Optional
 
+try:
+    from dotenv import load_dotenv
+    load_dotenv()
+except ImportError:
+    pass
+
 # Importar checkers específicos de cada motor
 from src.healthcheck import checks_postgres, checks_mysql
 
@@ -248,26 +254,16 @@ class HealthReport:
 # FUNCIONES DE CARGA DE CONFIGURACIÓN
 # ---------------------------------------------------------------------------
 
+# Cargar variables de entorno desde .env
+try:
+    from dotenv import load_dotenv
+    load_dotenv()
+except ImportError:
+    pass
+
 def _load_yaml(path: Path) -> dict:
     """
     Carga y parsea un archivo YAML de configuración.
-
-    Parámetros
-    ----------
-    path : Path
-        Ruta absoluta al archivo YAML.
-
-    Retorna
-    -------
-    dict
-        Contenido parseado del archivo YAML.
-
-    Raises
-    ------
-    FileNotFoundError
-        Si el archivo no existe en la ruta especificada.
-    yaml.YAMLError
-        Si el archivo tiene errores de sintaxis YAML.
     """
     if not path.exists():
         raise FileNotFoundError(
@@ -275,102 +271,68 @@ def _load_yaml(path: Path) -> dict:
             "Asegúrese de que el archivo existe antes de ejecutar el engine."
         )
     with open(path, encoding="utf-8") as fh:
-        content = yaml.safe_load(fh)
+        raw_text = fh.read()
+        # Expandir variables de entorno en el texto YAML
+        for key, value in os.environ.items():
+            raw_text = raw_text.replace(f"${{{key}}}", value)
+        content = yaml.safe_load(raw_text)
     if not content:
         logger.warning("Archivo YAML vacío o nulo: %s", path)
         return {}
-    logger.debug("Configuración cargada: %s (%d claves)", path.name, len(content))
+    logger.debug("Configuración cargada: %s", path.name)
     return content
 
 
 def _load_databases_config() -> dict:
     """
     Carga el inventario de bases de datos desde config/databases.yaml.
-
-    Retorna
-    -------
-    dict
-        Diccionario con el inventario de bases de datos indexado por db_id.
-
-    Estructura esperada del YAML:
-    ```yaml
-    databases:
-      prod_postgres_01:
-        type: postgres
-        host: 10.0.0.1
-        port: 5432
-        dbname: ventas_produccion
-        user: sentinel
-        password: "{{ SENTINEL_PG_PASS }}"
-        environment: production
-        tags: [critical, billing]
-      prod_mysql_01:
-        type: mysql
-        host: 10.0.0.2
-        port: 3306
-        database: erp_core
-        user: sentinel
-        password: "{{ SENTINEL_MYSQL_PASS }}"
-        environment: production
-    ```
+    Retorna un diccionario indexado por db_id.
     """
     config = _load_yaml(DATABASES_YAML)
-    databases = config.get("databases", {})
+    raw_dbs = config.get("databases", {})
+    if isinstance(raw_dbs, list):
+        databases = {db["id"]: db for db in raw_dbs if isinstance(db, dict) and "id" in db}
+    elif isinstance(raw_dbs, dict):
+        databases = raw_dbs
+    else:
+        databases = {}
+
     if not databases:
         logger.warning("No se encontraron bases de datos en %s", DATABASES_YAML)
     else:
         logger.info("Inventario cargado: %d bases de datos", len(databases))
     return databases
 
+_load_database_configs = _load_databases_config
+
 
 def _load_alert_rules() -> dict:
     """
     Carga las reglas de alerta desde config/alert_rules.yaml.
-
-    Retorna
-    -------
-    dict
-        Diccionario con umbrales globales y por tipo de motor.
     """
     try:
         config = _load_yaml(ALERT_RULES_YAML)
-        return config.get("thresholds", {})
+        return config.get("rules", config.get("thresholds", {}))
     except FileNotFoundError:
-        logger.warning(
-            "alert_rules.yaml no encontrado — usando umbrales por defecto"
-        )
+        logger.warning("alert_rules.yaml no encontrado — usando umbrales por defecto")
         return {}
 
 
 def _resolve_env_vars(conn_params: dict) -> dict:
     """
-    Resuelve variables de entorno en los parámetros de conexión.
-
-    Permite usar referencias del tipo '{{ VAR_NAME }}' o '$VAR_NAME'
-    en el YAML para mantener las credenciales fuera del código fuente.
-
-    Parámetros
-    ----------
-    conn_params : dict
-        Parámetros que pueden contener referencias a variables de entorno.
-
-    Retorna
-    -------
-    dict
-        Parámetros con las variables de entorno resueltas.
+    Resuelve variables de entorno recursivamente en el diccionario de configuración.
     """
     resolved = {}
     for key, value in conn_params.items():
-        if isinstance(value, str):
-            # Soporte para formato {{ ENV_VAR }} y $ENV_VAR
-            if value.startswith("{{") and value.endswith("}}"):
+        if isinstance(value, dict):
+            resolved[key] = _resolve_env_vars(value)
+        elif isinstance(value, str):
+            if value.startswith("${") and value.endswith("}"):
+                env_var = value[2:-1]
+                resolved[key] = os.environ.get(env_var, value)
+            elif value.startswith("{{") and value.endswith("}}"):
                 env_var = value.strip("{{ }}").strip()
                 resolved[key] = os.environ.get(env_var, value)
-                if resolved[key] == value:
-                    logger.warning(
-                        "Variable de entorno '%s' no definida para parámetro '%s'",
-                        env_var, key
-                    )
             elif value.startswith("$"):
                 env_var = value[1:]
                 resolved[key] = os.environ.get(env_var, value)
@@ -381,59 +343,32 @@ def _resolve_env_vars(conn_params: dict) -> dict:
     return resolved
 
 
-# ---------------------------------------------------------------------------
-# CONSTRUCCIÓN DE PARÁMETROS DE CONEXIÓN
-# ---------------------------------------------------------------------------
-
 def _build_conn_params(db_config: dict, db_type: str) -> dict:
     """
     Construye el diccionario de parámetros de conexión según el motor.
-
-    Mapea los campos del YAML de inventario a los parámetros esperados
-    por psycopg2 (PostgreSQL) o mysql.connector (MySQL).
-
-    Parámetros
-    ----------
-    db_config : dict
-        Configuración de la base de datos desde databases.yaml.
-    db_type : str
-        Tipo de motor: 'postgres' o 'mysql'.
-
-    Retorna
-    -------
-    dict
-        Parámetros de conexión listos para usar con el conector.
     """
     resolved = _resolve_env_vars(db_config)
+    creds = resolved.get("credentials", {})
 
-    if db_type == "postgres":
+    if db_type in ("postgres", "postgresql"):
         params = {
-            "host": resolved.get("host", "localhost"),
-            "port": int(resolved.get("port", 5432)),
-            "dbname": resolved.get("dbname", resolved.get("database", "postgres")),
-            "user": resolved.get("user", resolved.get("username", "postgres")),
-            "password": resolved.get("password", ""),
+            "host": resolved.get("host", os.getenv("POSTGRES_HOST", "127.0.0.1")),
+            "port": int(resolved.get("port", os.getenv("POSTGRES_PORT", 5432))),
+            "dbname": resolved.get("database", resolved.get("dbname", os.getenv("POSTGRES_DB", "postgres"))),
+            "user": creds.get("username", resolved.get("user", resolved.get("username", os.getenv("POSTGRES_USER", "postgres")))),
+            "password": creds.get("password", resolved.get("password", os.getenv("POSTGRES_PASSWORD", ""))),
         }
-        # Opcional: SSL
         if resolved.get("sslmode"):
             params["sslmode"] = resolved["sslmode"]
-        if resolved.get("sslrootcert"):
-            params["sslrootcert"] = resolved["sslrootcert"]
 
-    elif db_type == "mysql":
+    elif db_type in ("mysql", "mariadb"):
         params = {
-            "host": resolved.get("host", "localhost"),
-            "port": int(resolved.get("port", 3306)),
-            "database": resolved.get("database", resolved.get("dbname", "mysql")),
-            "user": resolved.get("user", resolved.get("username", "root")),
-            "password": resolved.get("password", ""),
+            "host": resolved.get("host", os.getenv("MYSQL_HOST", "127.0.0.1")),
+            "port": int(resolved.get("port", os.getenv("MYSQL_PORT", 3307))),
+            "database": resolved.get("database", resolved.get("dbname", os.getenv("MYSQL_DB", "mysql"))),
+            "user": creds.get("username", resolved.get("user", resolved.get("username", os.getenv("MYSQL_USER", "root")))),
+            "password": creds.get("password", resolved.get("password", os.getenv("MYSQL_PASSWORD", ""))),
         }
-        # Opcional: SSL/TLS
-        if resolved.get("ssl_ca"):
-            params["ssl_ca"] = resolved["ssl_ca"]
-        if resolved.get("ssl_cert"):
-            params["ssl_cert"] = resolved["ssl_cert"]
-
     else:
         raise ValueError(f"Tipo de base de datos no soportado: '{db_type}'")
 

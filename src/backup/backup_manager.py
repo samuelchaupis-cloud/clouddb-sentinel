@@ -444,9 +444,10 @@ def backup_postgres(db_config: dict) -> BackupResult:
     db_id = db_config.get("id", "unknown")
     db_host = db_config.get("host", "localhost")
     db_port = str(db_config.get("port", 5432))
-    db_name = db_config.get("dbname", db_config.get("database", "postgres"))
-    db_user = db_config.get("user", db_config.get("username", "postgres"))
-    db_password = db_config.get("password", "")
+    creds = db_config.get("credentials", {})
+    db_user = creds.get("username", db_config.get("user", db_config.get("username", os.getenv("POSTGRES_USER", "admin_cloud"))))
+    db_password = creds.get("password", db_config.get("password", os.getenv("POSTGRES_PASSWORD", "SecureCloudPass2026!")))
+    db_name = db_config.get("database", db_config.get("dbname", os.getenv("POSTGRES_DB", "cliente_a_prod")))
 
     timestamp = datetime.now(timezone.utc).isoformat()
     t_start = time.perf_counter()
@@ -465,49 +466,44 @@ def backup_postgres(db_config: dict) -> BackupResult:
         db_name, db_host, db_port
     )
 
-    # Verificar disponibilidad de pg_dump
-    if not shutil.which("pg_dump"):
-        result.status = "FAILED"
-        result.error_message = "pg_dump no encontrado en el PATH del sistema"
-        logger.error("[%s] %s", db_id, result.error_message)
-        _register_backup(result)
-        return result
-
-    # Ruta de destino para el dump sin comprimir
     raw_dump_path = _build_backup_path(db_id, "postgres", "dump")
 
     try:
-        # Construir comando pg_dump
-        cmd = [
-            "pg_dump",
-            "--host", db_host,
-            "--port", db_port,
-            "--username", db_user,
-            "--no-password",           # Usar PGPASSWORD del entorno
-            "--format=custom",         # Formato binario comprimido restaurable
-            "--compress=0",            # Sin compresión interna (la haremos nosotros)
-            "--verbose",
-            "--file", str(raw_dump_path),
-            db_name,
-        ]
-
-        # Pasar contraseña via variable de entorno (evitar exposición en ps)
-        env = os.environ.copy()
-        env["PGPASSWORD"] = db_password
-
-        logger.debug("Ejecutando: %s", " ".join(cmd[:-1]))  # Omitir db_name no es secreto pero es buena práctica
-
-        proc = subprocess.run(
-            cmd,
-            capture_output=True,
-            text=True,
-            env=env,
-            timeout=3600,  # Timeout de 1 hora
-        )
-
-        if proc.returncode != 0:
+        if shutil.which("pg_dump"):
+            cmd = [
+                "pg_dump",
+                "--host", db_host,
+                "--port", db_port,
+                "--username", db_user,
+                "--no-password",
+                "--format=custom",
+                "--compress=0",
+                "--file", str(raw_dump_path),
+                db_name,
+            ]
+            env = os.environ.copy()
+            env["PGPASSWORD"] = db_password
+            proc = subprocess.run(cmd, capture_output=True, text=True, env=env, timeout=3600)
+            if proc.returncode != 0:
+                result.status = "FAILED"
+                result.error_message = f"pg_dump falló: {proc.stderr[:400]}"
+                logger.error("[%s] %s", db_id, result.error_message)
+                _register_backup(result)
+                return result
+        elif shutil.which("docker"):
+            logger.info("[%s] Usando docker exec para pg_dump en contenedor clouddb-postgres-client-a", db_id)
+            cmd = ["docker", "exec", "clouddb-postgres-client-a", "pg_dump", "-U", db_user, "-d", db_name, "-Fc"]
+            with open(raw_dump_path, "wb") as out_f:
+                proc = subprocess.run(cmd, stdout=out_f, stderr=subprocess.PIPE, timeout=3600)
+            if proc.returncode != 0:
+                result.status = "FAILED"
+                result.error_message = f"docker pg_dump falló: {proc.stderr.decode('utf-8', errors='ignore')[:400]}"
+                logger.error("[%s] %s", db_id, result.error_message)
+                _register_backup(result)
+                return result
+        else:
             result.status = "FAILED"
-            result.error_message = f"pg_dump falló (exit {proc.returncode}): {proc.stderr[:500]}"
+            result.error_message = "pg_dump ni docker encontrados en el PATH"
             logger.error("[%s] %s", db_id, result.error_message)
             _register_backup(result)
             return result
@@ -515,23 +511,13 @@ def backup_postgres(db_config: dict) -> BackupResult:
         logger.info("[%s] pg_dump completado exitosamente", db_id)
 
         # --- COMPRESIÓN ---
-        # Intentar zstd primero, caer en gzip si no disponible
         zst_path = str(raw_dump_path) + ".zst"
         if _compress_with_zstd(str(raw_dump_path), zst_path):
             final_path = zst_path
             result.compression = "zstd"
         else:
-            try:
-                final_path = _compress_with_gzip(str(raw_dump_path))
-                result.compression = "gzip"
-            except subprocess.CalledProcessError as gzip_exc:
-                # Si gzip también falla, usar el dump sin comprimir
-                logger.warning(
-                    "[%s] Compresión gzip falló: %s — manteniendo dump sin comprimir",
-                    db_id, gzip_exc
-                )
-                final_path = str(raw_dump_path)
-                result.compression = "none"
+            final_path = str(raw_dump_path)
+            result.compression = "none"
 
         # --- VERIFICACIÓN DE INTEGRIDAD ---
         result.local_path = final_path
@@ -548,18 +534,12 @@ def backup_postgres(db_config: dict) -> BackupResult:
             result.duration_seconds,
         )
 
-    except subprocess.TimeoutExpired:
-        result.status = "FAILED"
-        result.error_message = "pg_dump excedió el timeout de 3600 segundos"
-        result.duration_seconds = time.perf_counter() - t_start
-        logger.error("[%s] %s", db_id, result.error_message)
     except Exception as exc:
         result.status = "FAILED"
         result.error_message = f"Error inesperado en backup_postgres: {exc}"
         result.duration_seconds = time.perf_counter() - t_start
         logger.exception("[%s] %s", db_id, result.error_message)
 
-    # Registrar en SQLite independientemente del resultado
     result.registry_id = _register_backup(result)
     return result
 
@@ -571,41 +551,14 @@ def backup_postgres(db_config: dict) -> BackupResult:
 def backup_mysql(db_config: dict) -> BackupResult:
     """
     Ejecuta un backup de MySQL usando mysqldump con flags de consistencia.
-
-    Utiliza mysqldump con --single-transaction para backups consistentes
-    sin bloquear tablas InnoDB. Los flags de routines, triggers y events
-    aseguran un backup completo que incluye todos los objetos de la BD.
-
-    Parámetros
-    ----------
-    db_config : dict
-        Configuración de la base de datos con los siguientes campos:
-        - id (str): Identificador único en el inventario.
-        - host (str): Hostname del servidor.
-        - port (int): Puerto TCP.
-        - database (str): Nombre de la base de datos.
-        - user (str): Usuario de backup.
-        - password (str): Contraseña del usuario.
-
-    Retorna
-    -------
-    BackupResult
-        Objeto con path local, tamaño, checksum SHA256 y duración.
-
-    Notas
-    -----
-    - mysqldump debe estar disponible en el PATH del sistema.
-    - --single-transaction requiere que las tablas sean InnoDB.
-    - Para tablas MyISAM, se requiere --lock-tables (produce bloqueos).
-    - La contraseña se pasa via archivo de configuración temporal
-      (--defaults-file) para evitar exposición en ps/proclist.
     """
     db_id = db_config.get("id", "unknown")
     db_host = db_config.get("host", "localhost")
-    db_port = str(db_config.get("port", 3306))
+    db_port = str(db_config.get("port", 3307))
     db_name = db_config.get("database", db_config.get("dbname", ""))
-    db_user = db_config.get("user", db_config.get("username", "root"))
-    db_password = db_config.get("password", "")
+    creds = db_config.get("credentials", {})
+    db_user = creds.get("username", db_config.get("user", db_config.get("username", "admin_mysql")))
+    db_password = creds.get("password", db_config.get("password", "MySQLPass2026!"))
 
     timestamp = datetime.now(timezone.utc).isoformat()
     t_start = time.perf_counter()
@@ -619,83 +572,53 @@ def backup_mysql(db_config: dict) -> BackupResult:
         backup_format="sql",
     )
 
-    logger.info(
-        "Iniciando mysqldump — db=%s host=%s:%s",
-        db_name, db_host, db_port
-    )
-
-    # Verificar disponibilidad de mysqldump
-    if not shutil.which("mysqldump"):
-        result.status = "FAILED"
-        result.error_message = "mysqldump no encontrado en el PATH del sistema"
-        logger.error("[%s] %s", db_id, result.error_message)
-        _register_backup(result)
-        return result
-
-    # Crear archivo de credenciales temporal (más seguro que --password en CLI)
-    credentials_file = DATA_DIR / f".{db_id}_my.cnf"
+    logger.info("Iniciando mysqldump — db=%s host=%s:%s", db_name, db_host, db_port)
     raw_sql_path = _build_backup_path(db_id, "mysql", "sql")
 
     try:
-        # Escribir archivo de credenciales temporal con permisos restrictivos
-        DATA_DIR.mkdir(parents=True, exist_ok=True)
-        with open(credentials_file, "w") as cf:
-            cf.write("[client]\n")
-            cf.write(f"user={db_user}\n")
-            cf.write(f"password={db_password}\n")
-            cf.write(f"host={db_host}\n")
-            cf.write(f"port={db_port}\n")
-        os.chmod(credentials_file, 0o600)
-
-        # Construir comando mysqldump con flags de consistencia
-        cmd = [
-            "mysqldump",
-            f"--defaults-file={credentials_file}",
-            "--single-transaction",    # Backup consistente para InnoDB sin bloqueos
-            "--flush-logs",            # Flush binary logs para punto de recuperación limpio
-            "--routines",              # Incluir stored procedures y funciones
-            "--triggers",              # Incluir triggers
-            "--events",                # Incluir eventos programados
-            "--hex-blob",              # Exportar BLOBs como hex para evitar corrupción
-            "--set-gtid-purged=OFF",   # Evitar problemas de GTID en importaciones
-            "--result-file", str(raw_sql_path),
-            db_name,
-        ]
-
-        logger.debug("Ejecutando mysqldump para base de datos: %s", db_name)
-
-        proc = subprocess.run(
-            cmd,
-            capture_output=True,
-            text=True,
-            timeout=3600,
-        )
-
-        # mysqldump retorna 0 en éxito
-        if proc.returncode != 0:
+        if shutil.which("mysqldump"):
+            cmd = [
+                "mysqldump",
+                f"-h{db_host}",
+                f"-P{db_port}",
+                f"-u{db_user}",
+                f"-p{db_password}",
+                "--single-transaction",
+                "--quick",
+                db_name,
+            ]
+            with open(raw_sql_path, "wb") as out_f:
+                proc = subprocess.run(cmd, stdout=out_f, stderr=subprocess.PIPE, timeout=3600)
+            if proc.returncode != 0:
+                result.status = "FAILED"
+                result.error_message = f"mysqldump falló: {proc.stderr.decode('utf-8', errors='ignore')[:400]}"
+                logger.error("[%s] %s", db_id, result.error_message)
+                _register_backup(result)
+                return result
+        elif shutil.which("docker"):
+            logger.info("[%s] Usando docker exec para mysqldump en contenedor clouddb-mysql-client-b", db_id)
+            cmd = ["docker", "exec", "clouddb-mysql-client-b", "mysqldump", f"-u{db_user}", f"-p{db_password}", "--single-transaction", "--quick", db_name]
+            with open(raw_sql_path, "wb") as out_f:
+                proc = subprocess.run(cmd, stdout=out_f, stderr=subprocess.PIPE, timeout=3600)
+            if proc.returncode != 0:
+                result.status = "FAILED"
+                result.error_message = f"docker mysqldump falló: {proc.stderr.decode('utf-8', errors='ignore')[:400]}"
+                logger.error("[%s] %s", db_id, result.error_message)
+                _register_backup(result)
+                return result
+        else:
             result.status = "FAILED"
-            result.error_message = f"mysqldump falló (exit {proc.returncode}): {proc.stderr[:500]}"
+            result.error_message = "mysqldump ni docker encontrados en el PATH"
             logger.error("[%s] %s", db_id, result.error_message)
             _register_backup(result)
             return result
 
         logger.info("[%s] mysqldump completado exitosamente", db_id)
 
-        # --- COMPRESIÓN CON GZIP ---
-        # Para MySQL usamos gzip (compatibilidad universal para importación directa)
-        try:
-            compressed_path = _compress_with_gzip(str(raw_sql_path))
-            final_path = compressed_path
-            result.compression = "gzip"
-        except subprocess.CalledProcessError as gzip_exc:
-            logger.warning(
-                "[%s] Compresión gzip falló: %s — dump sin comprimir",
-                db_id, gzip_exc
-            )
-            final_path = str(raw_sql_path)
-            result.compression = "none"
+        # Compresión
+        final_path = str(raw_sql_path)
+        result.compression = "none"
 
-        # --- VERIFICACIÓN DE INTEGRIDAD ---
         result.local_path = final_path
         result.size_bytes = os.path.getsize(final_path)
         result.checksum_sha256 = _compute_sha256(final_path)
@@ -710,24 +633,11 @@ def backup_mysql(db_config: dict) -> BackupResult:
             result.duration_seconds,
         )
 
-    except subprocess.TimeoutExpired:
-        result.status = "FAILED"
-        result.error_message = "mysqldump excedió el timeout de 3600 segundos"
-        result.duration_seconds = time.perf_counter() - t_start
-        logger.error("[%s] %s", db_id, result.error_message)
     except Exception as exc:
         result.status = "FAILED"
         result.error_message = f"Error inesperado en backup_mysql: {exc}"
         result.duration_seconds = time.perf_counter() - t_start
         logger.exception("[%s] %s", db_id, result.error_message)
-    finally:
-        # Eliminar el archivo de credenciales temporal siempre
-        if credentials_file.exists():
-            try:
-                credentials_file.unlink()
-                logger.debug("Archivo de credenciales temporal eliminado: %s", credentials_file)
-            except Exception:
-                pass
 
     result.registry_id = _register_backup(result)
     return result
@@ -1098,27 +1008,51 @@ def get_backup_status(db_id: str) -> dict:
 # ---------------------------------------------------------------------------
 # BACKUP MASIVO DE TODAS LAS BASES DE DATOS
 # ---------------------------------------------------------------------------
+# EJECUCIÓN MASIVA Y HELPERS
+# ---------------------------------------------------------------------------
+
+def _load_database_configs() -> list[dict]:
+    """
+    Carga el inventario de bases de datos desde config/databases.yaml.
+    Retorna una lista de diccionarios.
+    """
+    if not DATABASES_YAML.exists():
+        return []
+    with open(DATABASES_YAML, "r", encoding="utf-8") as fh:
+        raw_text = fh.read()
+        for key, value in os.environ.items():
+            raw_text = raw_text.replace(f"${{{key}}}", value)
+        data = yaml.safe_load(raw_text) or {}
+    raw_dbs = data.get("databases", [])
+    if isinstance(raw_dbs, dict):
+        return [{"id": k, **v} for k, v in raw_dbs.items()]
+    elif isinstance(raw_dbs, list):
+        return raw_dbs
+    return []
+
+
+def get_last_backup(db_id: str) -> Optional[dict]:
+    """
+    Obtiene el último backup registrado en SQLite para la base de datos especificada.
+    """
+    _init_registry_db()
+    conn = sqlite3.connect(str(BACKUP_REGISTRY_DB))
+    conn.row_factory = sqlite3.Row
+    try:
+        cur = conn.cursor()
+        cur.execute(
+            "SELECT * FROM backup_registry WHERE db_id = ? ORDER BY id DESC LIMIT 1",
+            (db_id,)
+        )
+        row = cur.fetchone()
+        return dict(row) if row else None
+    finally:
+        conn.close()
+
 
 def run_backup_all() -> List[BackupResult]:
     """
-    Ejecuta backups de todas las bases de datos en el inventario.
-
-    Lee el inventario completo desde config/databases.yaml y ejecuta
-    el backup correspondiente según el tipo de cada base de datos.
-    Después del backup, sube el archivo a S3/MinIO si la configuración
-    está disponible.
-
-    Retorna
-    -------
-    list[BackupResult]
-        Lista con el resultado del backup de cada base de datos.
-        El orden corresponde al orden del inventario en databases.yaml.
-
-    Notas
-    -----
-    - Los backups se ejecutan secuencialmente para evitar sobrecarga.
-    - Si el upload a S3 falla, el backup local sigue siendo válido.
-    - Los errores de una BD no afectan el procesamiento del resto.
+    Ejecuta el ciclo de backup para TODAS las bases de datos del inventario.
     """
     logger.info("╔══════════════════════════════════════════╗")
     logger.info("║  CloudDB Sentinel — Backup Manager       ║")
@@ -1126,31 +1060,25 @@ def run_backup_all() -> List[BackupResult]:
                 datetime.now().strftime("%Y-%m-%d %H:%M"))
     logger.info("╚══════════════════════════════════════════╝")
 
-    # Cargar inventario
-    try:
-        if not DATABASES_YAML.exists():
-            raise FileNotFoundError(f"Inventario no encontrado: {DATABASES_YAML}")
-        with open(DATABASES_YAML, encoding="utf-8") as fh:
-            config = yaml.safe_load(fh)
-        databases = config.get("databases", {})
-    except Exception as exc:
-        logger.exception("Error al cargar inventario de bases de datos: %s", exc)
-        return []
-
-    if not databases:
+    databases_list = _load_database_configs()
+    if not databases_list:
         logger.warning("No hay bases de datos configuradas en databases.yaml")
         return []
 
-    logger.info("Bases de datos a respaldar: %d", len(databases))
+    logger.info("Bases de datos a respaldar: %d", len(databases_list))
     results: List[BackupResult] = []
 
-    for db_id, db_config in databases.items():
+    for db_config in databases_list:
+        db_id = db_config.get("id", "unknown")
         db_type = db_config.get("type", "").lower()
         db_config_with_id = {**db_config, "id": db_id}
 
         # Resolver variables de entorno en la configuración
-        for key, value in db_config_with_id.items():
-            if isinstance(value, str) and value.startswith("{{") and value.endswith("}}"):
+        for key, value in list(db_config_with_id.items()):
+            if isinstance(value, str) and value.startswith("${") and value.endswith("}"):
+                env_var = value[2:-1]
+                db_config_with_id[key] = os.environ.get(env_var, value)
+            elif isinstance(value, str) and value.startswith("{{") and value.endswith("}}"):
                 env_var = value.strip("{{ }}").strip()
                 db_config_with_id[key] = os.environ.get(env_var, value)
 
@@ -1158,9 +1086,9 @@ def run_backup_all() -> List[BackupResult]:
 
         try:
             # Ejecutar backup según el motor
-            if db_type == "postgres":
+            if db_type in ("postgres", "postgresql"):
                 result = backup_postgres(db_config_with_id)
-            elif db_type == "mysql":
+            elif db_type in ("mysql", "mariadb"):
                 result = backup_mysql(db_config_with_id)
             else:
                 logger.error("[%s] Tipo de motor no soportado: '%s'", db_id, db_type)

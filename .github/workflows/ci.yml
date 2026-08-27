@@ -1,10 +1,3 @@
-# =============================================================================
-# CloudDB Sentinel — GitHub Actions CI/CD Pipeline
-# =============================================================================
-# Pipeline automatizado que valida la calidad de código, linting y pruebas
-# unitarias en cada Push y Pull Request sobre la rama principal.
-# =============================================================================
-
 name: CloudDB Sentinel CI
 
 on:
@@ -13,10 +6,10 @@ on:
   pull_request:
     branches: [ "main", "master" ]
 
+env:
+  PYTHONPATH: .
+
 jobs:
-  # ---------------------------------------------------------------------------
-  # Job 1: Linting y Análisis Estático de Código
-  # ---------------------------------------------------------------------------
   lint:
     name: Code Quality & Linting
     runs-on: ubuntu-latest
@@ -33,18 +26,24 @@ jobs:
       - name: Instalar dependencias de desarrollo
         run: |
           python -m pip install --upgrade pip
-          pip install flake8 black pytest
+          pip install flake8 pyyaml
 
       - name: Validar sintaxis y errores críticos con Flake8
         run: |
-          # Detiene la ejecución si hay errores de sintaxis Python o variables indefinidas
-          flake8 src tests --count --select=E9,F63,F7,F82 --show-source --statistics
-          # Advertencias de complejidad y estilo (sin romper el build)
-          flake8 src tests --count --exit-zero --max-complexity=15 --max-line-length=120 --statistics
+          flake8 src/ tests/ --count --select=E9,F63,F7,F82 --show-source --statistics
+          flake8 src/ tests/ --count --exit-zero --max-complexity=15 --max-line-length=127 --statistics
 
-  # ---------------------------------------------------------------------------
-  # Job 2: Pruebas Unitarias Automatizadas (Matrix: Ubuntu y Windows)
-  # ---------------------------------------------------------------------------
+      - name: Validar archivos de configuración YAML
+        run: |
+          python -c "
+          import yaml
+          from pathlib import Path
+          for f in Path('config').glob('*.y*ml'):
+              with open(f, 'r', encoding='utf-8') as yf:
+                  yaml.safe_load(yf)
+              print(f'✓ Archivo YAML válido: {f}')
+          "
+
   test:
     name: Unit Tests (${{ matrix.os }} - Python ${{ matrix.python-version }})
     needs: lint
@@ -77,4 +76,4 @@ jobs:
 
       - name: Ejecutar Suite de Pruebas Automatizadas con Pytest
         run: |
-          pytest tests/ -v --color=yes
+          python -m pytest tests/ -v --color=yes

@@ -725,6 +725,45 @@ class AlertManager:
 
 
 # ---------------------------------------------------------------------------
+# Funciones Helper a Nivel de Módulo
+# ---------------------------------------------------------------------------
+
+_global_alert_manager = None
+
+def get_alert_manager() -> AlertManager:
+    global _global_alert_manager
+    if _global_alert_manager is None:
+        _global_alert_manager = AlertManager()
+    return _global_alert_manager
+
+
+def send_alert(alert: Any) -> bool:
+    """
+    Envía una alerta individual a través del AlertManager global.
+    Acepta un objeto Alert o un diccionario con los datos de la alerta.
+    """
+    manager = get_alert_manager()
+    if isinstance(alert, dict):
+        alert_obj = Alert(
+            db_id=alert.get("db_id", "unknown"),
+            level=alert.get("level", "WARNING"),
+            category=alert.get("category", "SYSTEM_ALERT"),
+            message=alert.get("message", ""),
+            value=float(alert.get("value", 0.0) or 0.0),
+            threshold=float(alert.get("threshold", 0.0) or 0.0),
+        )
+    elif isinstance(alert, Alert):
+        alert_obj = alert
+    else:
+        return False
+
+    res = manager.dispatch_alerts([alert_obj])
+    dispatched_count = res.get("dispatched", 0) if isinstance(res.get("dispatched"), int) else 0
+    tickets_count = len(res.get("tickets_created", [])) if isinstance(res.get("tickets_created"), list) else 0
+    return (dispatched_count > 0 or tickets_count > 0)
+
+
+# ---------------------------------------------------------------------------
 # Punto de entrada para pruebas directas
 # ---------------------------------------------------------------------------
 

@@ -10,8 +10,6 @@
 # - Grafana (Dashboards visuales de observabilidad)
 # =============================================================================
 
-version: '3.8'
-
 services:
   # ---------------------------------------------------------------------------
   # Base de Datos 1: PostgreSQL 16 (Cliente A - Producción B2B)
@@ -24,6 +22,7 @@ services:
       POSTGRES_USER: ${POSTGRES_USER:-admin_cloud}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-SecureCloudPass2026!}
       POSTGRES_DB: ${POSTGRES_DB:-cliente_a_prod}
+      POSTGRES_HOST_AUTH_METHOD: trust
       PGDATA: /var/lib/postgresql/data/pgdata
     ports:
       - "${POSTGRES_PORT:-5432}:5432"

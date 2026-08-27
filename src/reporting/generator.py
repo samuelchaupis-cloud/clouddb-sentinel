@@ -405,40 +405,30 @@ def generate_daily_report(output_dir: str = "reports/", extra_context: Optional[
 def _fetch_health_report() -> dict:
     """
     Obtiene el reporte de health check del módulo correspondiente.
-    Maneja el caso en que el módulo no esté disponible con datos vacíos.
-
-    Returns:
-        Diccionario con los datos de health check.
     """
     try:
-        # Importación dinámica para evitar dependencia circular en tiempo de carga
-        from src.health_check.checker import run_all_checks
-        return run_all_checks()
-    except ImportError:
-        logger.warning("Módulo de health check no disponible. Usando datos vacíos.")
-        return {"checks": [], "generated_at": datetime.utcnow().isoformat()}
+        from src.healthcheck.engine import run_health_check
+        report = run_health_check()
+        return report.to_dict()
     except Exception as exc:
-        logger.error("Error al obtener health report: %s", exc)
-        return {"checks": [], "generated_at": datetime.utcnow().isoformat(), "error": str(exc)}
+        logger.warning("Error al obtener health report directo: %s", exc)
+        return {"checks": [], "generated_at": datetime.now().isoformat()}
 
 
 def _fetch_backup_status() -> dict:
     """
     Obtiene el estado de los backups del módulo de backup.
-    Maneja el caso en que el módulo no esté disponible con datos vacíos.
-
-    Returns:
-        Diccionario con el estado de los backups.
     """
     try:
-        from src.backup.manager import get_backup_status_all
-        return get_backup_status_all()
-    except ImportError:
-        logger.warning("Módulo de backup no disponible. Usando datos vacíos.")
-        return {"backups": [], "generated_at": datetime.utcnow().isoformat()}
+        from src.backup.backup_manager import run_backup_all
+        results = run_backup_all()
+        return {
+            "backups": [r.to_dict() for r in results],
+            "generated_at": datetime.now().isoformat()
+        }
     except Exception as exc:
-        logger.error("Error al obtener backup status: %s", exc)
-        return {"backups": [], "generated_at": datetime.utcnow().isoformat(), "error": str(exc)}
+        logger.warning("Error al obtener backup status directo: %s", exc)
+        return {"backups": [], "generated_at": datetime.now().isoformat()}
 
 
 def _fetch_capacity_report() -> dict:

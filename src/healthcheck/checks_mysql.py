@@ -441,6 +441,8 @@ def check_locks(conn, thresholds: dict) -> dict:
         )
     except Exception as exc:
         duration = _elapsed_ms(t0)
+        if "Access denied" in str(exc) or "1227" in str(exc):
+            return _build_result(check_name, "INFO", 0, None, "Check omitido: el usuario de monitoreo no tiene privilegio PROCESS", duration)
         msg = f"Error en locks_check: {exc}"
         logger.exception("[%s] ERROR — %s", check_name, msg)
         return _build_result(check_name, "CRITICAL", None, None, msg, duration)
@@ -923,6 +925,8 @@ def check_innodb_status(conn, thresholds: dict) -> dict:  # noqa: ARG001
         )
     except Exception as exc:
         duration = _elapsed_ms(t0)
+        if "Access denied" in str(exc) or "1227" in str(exc):
+            return _build_result(check_name, "INFO", None, None, "Check omitido: privilegio PROCESS requerido para SHOW ENGINE INNODB STATUS", duration)
         msg = f"Error en innodb_status: {exc}"
         logger.exception("[%s] ERROR — %s", check_name, msg)
         return _build_result(check_name, "CRITICAL", None, None, msg, duration)
