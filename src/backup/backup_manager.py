@@ -77,12 +77,12 @@ BACKUP_REGISTRY_DB = DATA_DIR / "backup_registry.db"
 # ---------------------------------------------------------------------------
 # CONFIGURACIÓN S3/MinIO DESDE VARIABLES DE ENTORNO
 # ---------------------------------------------------------------------------
-S3_ENDPOINT_URL = os.environ.get("S3_ENDPOINT_URL", "")        # MinIO: http://minio:9000
-S3_ACCESS_KEY = os.environ.get("S3_ACCESS_KEY_ID", "")
-S3_SECRET_KEY = os.environ.get("S3_SECRET_ACCESS_KEY", "")
-S3_BUCKET_NAME = os.environ.get("S3_BUCKET_NAME", "clouddb-backups")
+S3_ENDPOINT_URL = os.environ.get("S3_ENDPOINT_URL", "http://127.0.0.1:9000")
+S3_ACCESS_KEY = os.environ.get("S3_ACCESS_KEY_ID") or os.environ.get("S3_ACCESS_KEY", "")
+S3_SECRET_KEY = os.environ.get("S3_SECRET_ACCESS_KEY") or os.environ.get("S3_SECRET_KEY", "")
+S3_BUCKET_NAME = os.environ.get("S3_BUCKET_NAME", "clouddb-backups-b2b")
 S3_REGION = os.environ.get("S3_REGION", "us-east-1")
-S3_PATH_PREFIX = os.environ.get("S3_PATH_PREFIX", "sentinel-backups")
+S3_PATH_PREFIX = os.environ.get("S3_PATH_PREFIX", "backups")
 
 
 # ---------------------------------------------------------------------------
