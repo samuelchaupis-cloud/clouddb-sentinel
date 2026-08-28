@@ -128,7 +128,7 @@ Desarrollada específicamente bajo los estándares operativos de proveedores lí
 
 ```bash
 # 1. Clonar el repositorio
-git clone https://github.com/tu-usuario/clouddb-sentinel.git
+git clone https://github.com/samuelchaupis-cloud/clouddb-sentinel.git
 cd clouddb-sentinel
 
 # 2. Configurar variables de entorno
@@ -144,7 +144,7 @@ source venv/bin/activate
 pip install -r requirements.txt
 
 # 4. Iniciar la infraestructura de prueba con Docker Compose
-docker-compose up -d
+docker compose up -d
 ```
 
 ### 3. Ejecución de la Suite Completa
@@ -162,25 +162,41 @@ chmod +x scripts/run_all.sh
 
 ---
 
+## 🌐 Accesos y Servicios del Ecosistema
+
+Una vez levantada la infraestructura, los servicios se encuentran disponibles en:
+
+| Servicio | URL / Endpoint | Credenciales por Defecto | Propósito |
+|:---|:---|:---|:---|
+| 📈 **Grafana Dashboard** | `http://localhost:13000` | `admin` / `AdminGrafana2026!` | Observabilidad en tiempo real y métricas de rendimiento (SLA > 98%). |
+| 🪣 **MinIO S3 Console** | `http://localhost:9001` | `cloud_backup_admin` / `MinioBackupPass2026!` | Almacenamiento de objetos S3 y explorador de respaldos. |
+| 📊 **Prometheus Server** | `http://localhost:9090` | Acceso directo sin autenticación | Recolección de telemetría de PostgreSQL Exporter. |
+| 📄 **Portal Ejecutivo HTML** | `reports/CloudDB_Sentinel_Report_YYYY-MM-DD.html` | Archivo estático autocontenido | Portal interactivo SaaS con 27 KPIs, Donut SVG y filtros. |
+
+---
+
 ## 💻 Ejecución Modular Independiente
 
 Cada módulo puede ejecutarse de manera desacoplada según la necesidad operativa:
 
 ```bash
-# Ejecutar únicamente el Health Check preventivo
+# 1. Ejecutar únicamente el Health Check preventivo (27 KPIs)
 python -m src.healthcheck.engine
 
-# Ejecutar el Pipeline de Respaldos hacia S3/MinIO
+# 2. Ejecutar el Pipeline de Respaldos hacia MinIO / AWS S3
 python -m src.backup.backup_manager
 
-# Ejecutar la Validación de Restauración (Disaster Recovery Test)
+# 3. Ejecutar la Validación de Restauración Zero-Trust (Disaster Recovery Test)
 python -m src.backup.dr_validator
 
-# Recopilar métricas de capacidad y proyectar crecimiento
+# 4. Recopilar métricas de capacidad y proyectar crecimiento
 python -m src.capacity.capacity_planner
 
-# Generar el Reporte Corporativo Ejecutivo
+# 5. Generar el Reporte Corporativo Ejecutivo HTML / PDF
 python -m src.reporting.generator
+
+# 6. Simular despacho de alertas críticas P1 hacia Telegram e ITSM
+python scripts/test_telegram_alert.py --simulate --level CRITICAL --category DATABASE_DOWN_P1
 ```
 
 ---
@@ -188,9 +204,10 @@ python -m src.reporting.generator
 ## 📄 Procedimientos Operativos Estándar (SOPs B2B)
 
 El proyecto incluye documentación técnica de nivel corporativo para auditar y operar en centros de operaciones de red (NOC) y centros de operaciones de seguridad (SOC):
-- [SOP-DBA-001: Rutina Diaria de Health Check](file:///docs/SOP_HEALTH_CHECK.md)
-- [SOP-DBA-002: Gestión de Respaldos y Recuperación ante Desastres](file:///docs/SOP_BACKUP_RESTORE.md)
-- [POL-CAP-001: Política de Gestión de Capacidad y SLAs](file:///docs/CAPACITY_MANAGEMENT.md)
+- [SOP-DBA-001: Rutina Diaria de Health Check](docs/SOP_HEALTH_CHECK.md)
+- [SOP-DBA-002: Gestión de Respaldos y Recuperación ante Desastres](docs/SOP_BACKUP_RESTORE.md)
+- [POL-CAP-001: Política de Gestión de Capacidad y SLAs](docs/CAPACITY_MANAGEMENT.md)
+- [GUÍA DE ENTREVISTA: Metodología STAR y Respuestas Técnicas](docs/INTERVIEW_GUIDE.md)
 
 ---
 
