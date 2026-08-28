@@ -336,7 +336,7 @@ def generate_html_report(
     Combina los datos de los tres módulos (health, backup, capacity), renderiza
     la plantilla Jinja2 y retorna el HTML completo como string.
     """
-    now = datetime.utcnow()
+    now = datetime.now()
     report_date = now.strftime("%Y-%m-%d")
     generated_at = now.strftime("%Y-%m-%d %H:%M:%S")
 
@@ -461,7 +461,7 @@ def generate_daily_report(output_dir: str = "reports/", extra_context: Optional[
         Ruta absoluta del reporte generado (.pdf o .html).
     """
     logger.info("=== Iniciando generación de reporte diario CloudDB Sentinel ===")
-    now = datetime.utcnow()
+    now = datetime.now()
     date_str = now.strftime("%Y-%m-%d")
 
     # Asegurar que el directorio de salida exista
