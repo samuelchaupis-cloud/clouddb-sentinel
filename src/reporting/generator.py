@@ -215,26 +215,37 @@ def _flatten_health_checks(health_report: dict) -> list[dict]:
     return flat
 
 
-def _determine_overall_status(health_report: dict, backup_status: dict, capacity_report: dict, flat_checks: list) -> str:
+def _determine_overall_status(
+    health_report: dict,
+    backup_status: dict,
+    capacity_report: dict,
+    flat_checks: Optional[list] = None,
+) -> str:
     """Determina el estado general del sistema."""
+    if flat_checks is None:
+        flat_checks = _flatten_health_checks(health_report)
+        if not flat_checks and isinstance(health_report.get("checks"), list):
+            flat_checks = health_report["checks"]
+
     has_critical = False
     has_warning = False
 
     for check in flat_checks:
-        st = check.get("status", "OK")
-        if st == "CRITICAL":
+        st = str(check.get("status", "OK")).upper()
+        if st in ("CRITICAL", "ERROR"):
             has_critical = True
-        elif st == "WARNING":
+        elif st in ("WARNING", "DEGRADED"):
             has_warning = True
 
     for bk in backup_status.get("backups", []):
-        if bk.get("status") == "FAILED":
+        if str(bk.get("status", "")).upper() in ("FAILED", "CRITICAL"):
             has_critical = True
 
     for alert in capacity_report.get("alerts", []):
-        if alert.get("level") == "CRITICAL":
+        lvl = str(alert.get("level", "")).upper()
+        if lvl in ("CRITICAL", "ERROR"):
             has_critical = True
-        elif alert.get("level") == "WARNING":
+        elif lvl in ("WARNING", "DEGRADED"):
             has_warning = True
 
     if has_critical:
@@ -244,8 +255,17 @@ def _determine_overall_status(health_report: dict, backup_status: dict, capacity
     return "healthy"
 
 
-def _build_summary(health_report: dict, backup_status: dict, capacity_report: dict, flat_checks: list) -> dict:
+def _build_summary(
+    health_report: dict,
+    backup_status: dict,
+    capacity_report: dict,
+    flat_checks: Optional[list] = None,
+) -> dict:
     """Construye el resumen de contadores de alto nivel."""
+    if flat_checks is None:
+        flat_checks = _flatten_health_checks(health_report)
+        if not flat_checks and isinstance(health_report.get("checks"), list):
+            flat_checks = health_report["checks"]
     healthy_dbs = 0
     warning_dbs = 0
     critical_dbs = 0

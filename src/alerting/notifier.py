@@ -22,7 +22,7 @@ import time
 import hashlib
 import requests
 from dataclasses import dataclass, field, asdict
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Optional, Any
 
 # ---------------------------------------------------------------------------
@@ -57,7 +57,7 @@ class Alert:
     message: str
     value: float = 0.0
     threshold: float = 0.0
-    timestamp: str = field(default_factory=lambda: datetime.utcnow().isoformat())
+    timestamp: str = field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
 
 
 @dataclass
@@ -371,7 +371,7 @@ class AlertManager:
         priority = _get_ticket_priority(alert.level, alert.category)
 
         # Generar número correlativo
-        date_key = datetime.utcnow().strftime("%Y%m%d")
+        date_key = datetime.now(timezone.utc).strftime("%Y%m%d")
         conn = sqlite3.connect(TICKETS_DB_PATH)
         try:
             # Incrementar contador atómicamente
@@ -413,7 +413,7 @@ class AlertManager:
             summary=f"[CloudDB Sentinel] {alert.category} en {alert.db_id}: {alert.message[:120]}",
             description=description,
             status="OPEN",
-            created_at=datetime.utcnow().isoformat(),
+            created_at=datetime.now(timezone.utc).isoformat(),
         )
 
         # Persistir en SQLite
