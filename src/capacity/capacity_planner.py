@@ -59,6 +59,7 @@ DISCO_UMBRAL_CRITICO_PCT = 85.0
 # Dataclasses de dominio
 # ---------------------------------------------------------------------------
 
+
 @dataclass
 class CapacitySnapshot:
     """Instantánea de capacidad de una base de datos en un momento dado."""
@@ -234,11 +235,13 @@ def _get_postgres_metrics(db_config: dict) -> tuple[float, list]:
             conn.close()
     except Exception:
         # Fallback a docker exec
-        cmd_size = ["docker", "exec", "clouddb-postgres-client-a", "psql", "-U", user, "-d", database, "-t", "-A", "-c", "SELECT pg_database_size(current_database()) / 1048576.0;"]
+        cmd_size = ["docker", "exec", "clouddb-postgres-client-a", "psql", "-U", user, "-d",
+                    database, "-t", "-A", "-c", "SELECT pg_database_size(current_database()) / 1048576.0;"]
         proc_s = subprocess.run(cmd_size, capture_output=True, text=True, timeout=15)
         db_size_mb = float(proc_s.stdout.strip()) if proc_s.returncode == 0 and proc_s.stdout.strip() else 0.0
 
-        cmd_tab = ["docker", "exec", "clouddb-postgres-client-a", "psql", "-U", user, "-d", database, "-t", "-A", "-F", "\t", "-c", "SELECT schemaname || '.' || tablename, pg_total_relation_size(schemaname || '.' || tablename) / 1048576.0 FROM pg_tables WHERE schemaname NOT IN ('pg_catalog', 'information_schema') ORDER BY 2 DESC LIMIT 10;"]
+        cmd_tab = ["docker", "exec", "clouddb-postgres-client-a", "psql", "-U", user, "-d", database, "-t", "-A", "-F", "\t", "-c",
+                   "SELECT schemaname || '.' || tablename, pg_total_relation_size(schemaname || '.' || tablename) / 1048576.0 FROM pg_tables WHERE schemaname NOT IN ('pg_catalog', 'information_schema') ORDER BY 2 DESC LIMIT 10;"]
         proc_t = subprocess.run(cmd_tab, capture_output=True, text=True, timeout=15)
         largest_tables = []
         if proc_t.returncode == 0 and proc_t.stdout.strip():
@@ -531,7 +534,6 @@ def calculate_growth_rate(db_id: str, window_days: int = 30) -> GrowthRate:
     x_days = []
     y_size_mb = []
     last_total_gb = 0.0
-    last_disk_pct = 0.0
 
     for ts_str, size_mb, total_gb, free_gb, disk_pct in rows:
         ts = datetime.fromisoformat(ts_str)
@@ -539,14 +541,14 @@ def calculate_growth_rate(db_id: str, window_days: int = 30) -> GrowthRate:
         x_days.append(elapsed_days)
         y_size_mb.append(float(size_mb))
         last_total_gb = float(total_gb)
-        last_disk_pct = float(disk_pct)
+        float(disk_pct)
 
     # Regresión lineal: slope = MB/día
     slope, intercept = _linear_regression(x_days, y_size_mb)
     avg_growth_mb_day = slope  # positivo = crecimiento, negativo = reducción
 
     # Proyecciones desde el último snapshot
-    last_x = x_days[-1]
+    x_days[-1]
     last_size_mb = y_size_mb[-1]
 
     def project(future_days: int) -> float:
@@ -562,7 +564,7 @@ def calculate_growth_rate(db_id: str, window_days: int = 30) -> GrowthRate:
     time_to_exhaustion_days = None
     if avg_growth_mb_day > 0 and last_total_gb > 0:
         # Espacio libre actual en MB
-        current_free_mb = (last_total_gb * 1024) * (1 - DISCO_UMBRAL_CRITICO_PCT / 100.0)
+        (last_total_gb * 1024) * (1 - DISCO_UMBRAL_CRITICO_PCT / 100.0)
         # Espacio libre disponible en MB considerando el umbral
         current_used_mb = last_size_mb
         available_mb = (last_total_gb * 1024 * (DISCO_UMBRAL_CRITICO_PCT / 100.0)) - current_used_mb
@@ -824,7 +826,7 @@ def check_capacity_alerts(db_config: dict, alert_rules: dict) -> list[Alert]:
     disk_warn_pct = float(alert_rules.get("disk_warning_pct", 75.0))
     disk_crit_pct = float(alert_rules.get("disk_critical_pct", 85.0))
     db_size_warn_mb = float(alert_rules.get("db_size_warning_mb", 5120.0))   # 5 GB
-    db_size_crit_mb = float(alert_rules.get("db_size_critical_mb", 10240.0)) # 10 GB
+    db_size_crit_mb = float(alert_rules.get("db_size_critical_mb", 10240.0))  # 10 GB
     exhaust_warn_days = int(alert_rules.get("exhaustion_warning_days", 60))
     exhaust_crit_days = int(alert_rules.get("exhaustion_critical_days", 14))
 

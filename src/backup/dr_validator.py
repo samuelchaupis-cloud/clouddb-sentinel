@@ -21,7 +21,6 @@ from __future__ import annotations
 import hashlib
 import json
 import logging
-import os
 import sqlite3
 import subprocess
 import sys
@@ -37,11 +36,10 @@ if hasattr(sys.stdout, "reconfigure"):
 from dataclasses import asdict, dataclass, field
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List
 
 from src.backup.backup_manager import (
     BACKUP_REGISTRY_DB,
-    BackupResult,
     get_last_backup,
     _load_database_configs,
 )

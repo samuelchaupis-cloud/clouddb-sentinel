@@ -15,10 +15,8 @@ Fecha: 2026
 """
 
 import sqlite3
-import json
 import logging
 import os
-import time
 import hashlib
 import requests
 from dataclasses import dataclass, field, asdict
@@ -44,6 +42,7 @@ TICKETS_DB_PATH = os.path.join(BASE_DIR, "data", "tickets.db")
 # ---------------------------------------------------------------------------
 # Dataclasses de dominio (reutilizable del módulo de capacity si se necesita)
 # ---------------------------------------------------------------------------
+
 
 @dataclass
 class Alert:
@@ -736,6 +735,7 @@ class AlertManager:
 # ---------------------------------------------------------------------------
 
 _global_alert_manager = None
+
 
 def get_alert_manager() -> AlertManager:
     global _global_alert_manager

@@ -14,7 +14,6 @@ Fecha: 2026
 
 import os
 import sys
-import json
 import logging
 
 # Configuración defensiva de encoding para Windows
@@ -71,6 +70,7 @@ def _get_jinja_env() -> Environment:
         lstrip_blocks=True,
     )
     # Filtro personalizado: formatear bytes a formato humano
+
     def human_bytes(value: float, unit: str = "MB") -> str:
         """Convierte un valor numérico a representación legible."""
         try:
@@ -202,7 +202,7 @@ def _flatten_health_checks(health_report: dict) -> list[dict]:
                 raw_val = chk_data.get("value")
                 raw_thresh = chk_data.get("threshold")
                 val_str, thresh_str = _format_human_metric(chk_name, raw_val, raw_thresh)
-                
+
                 flat.append({
                     "db_id": db_id,
                     "check_name": chk_data.get("check_name", chk_name),

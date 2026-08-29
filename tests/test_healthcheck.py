@@ -4,8 +4,6 @@ test_healthcheck.py — Pruebas Unitarias para el Motor de Health Check
 Valida la carga de inventario YAML, reglas de alerta y estructuración de reportes.
 """
 
-import pytest
-import yaml
 from pathlib import Path
 
 from src.healthcheck.engine import (
@@ -24,7 +22,7 @@ def test_database_inventory_loads_correctly():
     dbs = _load_database_configs()
     assert isinstance(dbs, (list, dict))
     assert len(dbs) >= 2, "Debe haber al menos 2 bases de datos en el inventario (Postgres y MySQL)"
-    
+
     dbs_list = list(dbs.values()) if isinstance(dbs, dict) else dbs
     pg_db = next((db for db in dbs_list if db.get("type") in ("postgres", "postgresql")), None)
     assert pg_db is not None, "Debe existir una base de datos PostgreSQL configurada"
@@ -37,7 +35,7 @@ def test_alert_rules_load_correctly():
     rules = _load_alert_rules()
     assert isinstance(rules, dict)
     assert "rules" in rules or "connection_latency" in rules
-    
+
     rules_dict = rules.get("rules", rules)
     assert "active_connections_pct" in rules_dict
     assert "cache_hit_ratio_pct" in rules_dict
@@ -60,7 +58,7 @@ def test_health_report_serialization():
         summary=CheckSummary(total=15, ok=14, warning=1, critical=0),
     )
     report.databases["test-pg"] = db_result
-    
+
     json_output = report.to_json()
     assert "TEST-REPORT-001" in json_output
     assert "test-pg" in json_output

@@ -14,6 +14,7 @@ Versión: 1.0.0
 """
 
 from __future__ import annotations
+from src.healthcheck import checks_postgres, checks_mysql
 
 import json
 import logging
@@ -31,7 +32,7 @@ if hasattr(sys.stdout, "reconfigure"):
 from dataclasses import asdict, dataclass, field
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Optional
+from typing import Optional
 
 # Directorio raíz del proyecto
 PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
@@ -43,7 +44,6 @@ except ImportError:
     pass
 
 # Importar checkers específicos de cada motor
-from src.healthcheck import checks_postgres, checks_mysql
 
 # Librería para leer archivos YAML de configuración
 try:
@@ -272,6 +272,7 @@ try:
 except ImportError:
     pass
 
+
 def _load_yaml(path: Path) -> dict:
     """
     Carga y parsea un archivo YAML de configuración.
@@ -313,6 +314,7 @@ def _load_databases_config() -> dict:
     else:
         logger.info("Inventario cargado: %d bases de datos", len(databases))
     return databases
+
 
 _load_database_configs = _load_databases_config
 

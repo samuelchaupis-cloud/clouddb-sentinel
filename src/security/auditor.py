@@ -44,15 +44,11 @@ if hasattr(sys.stdout, "reconfigure"):
 
 # Optional database connectors with defensive fallback
 try:
-    import psycopg2
-    import psycopg2.extras
     POSTGRES_AVAILABLE = True
 except ImportError:
     POSTGRES_AVAILABLE = False
 
 try:
-    import mysql.connector
-    from mysql.connector import Error as MySQLError
     MYSQL_AVAILABLE = True
 except ImportError:
     MYSQL_AVAILABLE = False
@@ -233,7 +229,7 @@ class DatabaseSecurityAuditor:
             sslmode = str(conn_params.get("sslmode", "")).lower()
             if sslmode in ("require", "verify-ca", "verify-full"):
                 ssl_enabled = True
-            
+
             # Si hay conexión activa, verificar pg_stat_ssl
             if active_connection is not None:
                 try:

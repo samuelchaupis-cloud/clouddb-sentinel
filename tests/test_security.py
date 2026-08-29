@@ -6,7 +6,6 @@ y generador de certificados de cumplimiento ISO 27001 / CIS Benchmarks.
 """
 
 import json
-from pathlib import Path
 from unittest.mock import MagicMock
 
 import pytest
@@ -14,7 +13,6 @@ import pytest
 from src.security.auditor import (
     DatabaseSecurityAuditor,
     SecurityAuditResult,
-    SecurityFinding,
 )
 
 

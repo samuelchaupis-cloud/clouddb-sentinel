@@ -31,7 +31,7 @@ if hasattr(sys.stdout, "reconfigure"):
         sys.stderr.reconfigure(encoding="utf-8", errors="replace")
     except Exception:
         pass
-from dataclasses import asdict, dataclass, field
+from dataclasses import asdict, dataclass
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import List, Optional
@@ -605,7 +605,8 @@ def backup_mysql(db_config: dict) -> BackupResult:
                 return result
         elif shutil.which("docker"):
             logger.info("[%s] Usando docker exec para mysqldump en contenedor clouddb-mysql-client-b", db_id)
-            cmd = ["docker", "exec", "clouddb-mysql-client-b", "mysqldump", f"-u{db_user}", f"-p{db_password}", "--single-transaction", "--quick", db_name]
+            cmd = ["docker", "exec", "clouddb-mysql-client-b", "mysqldump",
+                   f"-u{db_user}", f"-p{db_password}", "--single-transaction", "--quick", db_name]
             with open(raw_sql_path, "wb") as out_f:
                 proc = subprocess.run(cmd, stdout=out_f, stderr=subprocess.PIPE, timeout=3600)
             if proc.returncode != 0:
@@ -870,7 +871,7 @@ def cleanup_old_backups(db_id: str, retention_days: int) -> dict:
     # --- LIMPIEZA EN S3 ---
     try:
         s3_client = _get_s3_client()
-        prefix = f"{S3_PATH_PREFIX}/"
+        f"{S3_PATH_PREFIX}/"
 
         # Listar objetos del db_id en S3
         paginator = s3_client.get_paginator("list_objects_v2")

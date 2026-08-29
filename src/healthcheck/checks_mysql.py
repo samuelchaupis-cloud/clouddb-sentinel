@@ -14,7 +14,6 @@ Versión: 1.0.0
 
 import logging
 import time
-import traceback
 from datetime import datetime, timezone
 from typing import Any, Optional
 

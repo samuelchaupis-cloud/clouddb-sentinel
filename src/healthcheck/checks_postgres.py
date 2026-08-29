@@ -16,7 +16,6 @@ import logging
 import os
 import subprocess
 import time
-import traceback
 from datetime import datetime, timezone
 from typing import Any, Optional
 
@@ -134,6 +133,7 @@ class DictRow(dict):
     Soporta acceso por clave (row['col']), por índice (row[0]),
     método get, y conversión nativa directa con dict(row).
     """
+
     def __init__(self, values, keys=None):
         self._values = list(values)
         self._keys = [str(k).lower() for k in (keys or [])]
