@@ -58,8 +58,8 @@ variable "retention_expiration_days" {
   default     = 90
 
   validation {
-    condition     = var.retention_expiration_days > var.retention_glacier_days
-    error_message = "The retention_expiration_days must be strictly greater than retention_glacier_days."
+    condition     = var.retention_expiration_days >= 30 && var.retention_expiration_days <= 3650
+    error_message = "The retention_expiration_days must be an integer between 30 and 3650 days."
   }
 }
 
