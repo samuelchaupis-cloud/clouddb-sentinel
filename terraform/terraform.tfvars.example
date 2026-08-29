@@ -1,0 +1,22 @@
+# =============================================================================
+# CloudDB Sentinel — Terraform Variables Template (terraform.tfvars.example)
+# =============================================================================
+# Copy this file to terraform.tfvars and customize for your target environment.
+# =============================================================================
+
+# --- General Infrastructure Settings ---
+aws_region  = "us-east-1"
+environment = "production"
+
+# --- S3 Backup Storage Settings ---
+bucket_name               = "clouddb-backups-b2b-prod"
+enable_versioning         = true
+retention_glacier_days    = 30
+retention_expiration_days = 90
+
+# --- IAM Agent Identity ---
+iam_user_name = "sentinel-backup-agent"
+
+# --- LocalStack Emulation (set to true for offline local dev) ---
+enable_localstack   = false
+localstack_endpoint = "http://localhost:4566"

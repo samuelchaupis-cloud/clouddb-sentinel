@@ -1,17 +1,25 @@
-name: CloudDB Sentinel CI
+name: CloudDB Sentinel CI/CD (Enterprise Hardened)
 
 on:
   push:
     branches: [ "main", "master", "develop" ]
   pull_request:
-    branches: [ "main", "master" ]
+    branches: [ "main", "master", "develop" ]
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
 
 env:
   PYTHONPATH: .
 
 jobs:
-  lint:
-    name: Code Quality & Linting
+  lint-and-security:
+    name: Code Quality, Linting & IaC Validation
     runs-on: ubuntu-latest
     steps:
       - name: Checkout del Código
@@ -23,15 +31,17 @@ jobs:
           python-version: "3.11"
           cache: "pip"
 
-      - name: Instalar dependencias de desarrollo
+      - name: Instalar dependencias de linting y seguridad
         run: |
           python -m pip install --upgrade pip
           pip install flake8 pyyaml
 
-      - name: Validar sintaxis y errores críticos con Flake8
+      - name: Validar sintaxis y estándares con Flake8
         run: |
+          # Errores críticos de sintaxis (E9, F63, F7, F82)
           flake8 src/ tests/ --count --select=E9,F63,F7,F82 --show-source --statistics
-          flake8 src/ tests/ --count --exit-zero --max-complexity=15 --max-line-length=127 --statistics
+          # Complejidad ciclomática y longitud de línea
+          flake8 src/ tests/ --count --max-complexity=20 --max-line-length=130 --statistics
 
       - name: Validar archivos de configuración YAML
         run: |
@@ -44,9 +54,23 @@ jobs:
               print(f'✓ Archivo YAML válido: {f}')
           "
 
-  test:
-    name: Unit Tests (${{ matrix.os }} - Python ${{ matrix.python-version }})
-    needs: lint
+      - name: Configurar Terraform CLI
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: "1.7.5"
+
+      - name: Validar Formato de Terraform (terraform fmt)
+        run: |
+          terraform -chdir=terraform fmt -check
+
+      - name: Inicializar y Validar Sintaxis Terraform
+        run: |
+          terraform -chdir=terraform init -backend=false
+          terraform -chdir=terraform validate
+
+  unit-tests:
+    name: Test Suite (${{ matrix.os }} - Python ${{ matrix.python-version }})
+    needs: lint-and-security
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
@@ -74,6 +98,6 @@ jobs:
         run: |
           python -c "import shutil, os; shutil.copy('.env.example', '.env') if not os.path.exists('.env') else None"
 
-      - name: Ejecutar Suite de Pruebas Automatizadas con Pytest
+      - name: Ejecutar Suite de Pruebas Automatizadas con Cobertura
         run: |
-          python -m pytest tests/ -v --color=yes
+          python -m pytest tests/ -v --cov=src --cov-report=term-missing --color=yes
